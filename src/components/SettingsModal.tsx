@@ -22,7 +22,7 @@ const TABS = [
   { id: 'about', label: 'About & privacy', icon: Info },
 ];
 
-const TOOL_LABEL: Record<string, string> = { bold: 'Bold', italic: 'Italic', underline: 'Underline', strike: 'Strikethrough', highlight: 'Highlight', h1: 'Heading 1', h2: 'Heading 2', h3: 'Heading 3', bullet: 'Bulleted list', ordered: 'Numbered list', quote: 'Blockquote', link: 'Link', undo: 'Undo', redo: 'Redo' };
+const TOOL_LABEL: Record<string, string> = { bold: 'Bold', italic: 'Italic', underline: 'Underline', strike: 'Strikethrough', highlight: 'Highlight', color: 'Text color', h1: 'Heading 1', h2: 'Heading 2', h3: 'Heading 3', bullet: 'Bulleted list', ordered: 'Numbered list', quote: 'Blockquote', link: 'Link', undo: 'Undo', redo: 'Redo' };
 
 function Color({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return <label className="color-field"><input type="color" value={value || '#000000'} onChange={(e) => onChange(e.target.value)} /><span>{label}</span></label>;

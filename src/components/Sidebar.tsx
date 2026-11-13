@@ -286,6 +286,7 @@ function Manuscript({ projectId }: { projectId: string }) {
   const [drag, setDrag] = useState<Drag>(null);
   const [over, setOver] = useState<string | null>(null);
   const [colorFor, setColorFor] = useState<Chapter | null>(null);
+  const [sceneColorFor, setSceneColorFor] = useState<Scene | null>(null);
   const activeScene = route.view === 'write' ? route.sceneId : null;
   // pointing at a chapter or scene shows its description (if it has one) in a little box beside it
   const [peek, setPeek] = useState<{ kind: 'chapter' | 'scene'; id: string; rect: DOMRect } | null>(null);
@@ -353,6 +354,8 @@ function Manuscript({ projectId }: { projectId: string }) {
     { label: isPinned({ kind: 'scene', id: sc.id }) ? 'Unpin from sidebar' : 'Pin to sidebar', icon: <Pin size={14} />, onClick: () => togglePin({ projectId, kind: 'scene', id: sc.id }) },
     { label: 'Rename', icon: <Pencil size={14} />, onClick: async () => { const t = await promptDialog('Rename scene', sc.title); if (t) db.scenes.update(sc.id, { title: t }); } },
     { label: sc.summary?.trim() ? 'Edit description…' : 'Add a description…', icon: <AlignLeft size={14} />, onClick: () => describe('scene', sc.id) },
+    { label: 'Color…', icon: <span className="dot" style={{ background: sc.color || 'transparent', border: sc.color ? 'none' : '1px solid var(--muted)' }} />, onClick: () => setSceneColorFor(sc) },
+    { divider: true, label: '', onClick: () => {} },
     { label: 'Delete scene', danger: true, icon: <Trash2 size={14} />, onClick: async () => {
       if (route.view === 'write' && (route.sceneId === sc.id || route.splitSceneId === sc.id)) go({ view: 'project', projectId });
       toastTrashed(sc.title, await deleteScene(sc.id));
@@ -368,8 +371,8 @@ function Manuscript({ projectId }: { projectId: string }) {
                 onKeyDown={rowKeys(() => go({ view: 'write', projectId, sceneId: s.id }), (el) => { const r = el.getBoundingClientRect(); sceneMenu({ clientX: r.left + 24, clientY: r.bottom, preventDefault() {}, stopPropagation() {} } as unknown as React.MouseEvent, s); })}
                 onClick={() => go({ view: 'write', projectId, sceneId: s.id })} onContextMenu={(e) => sceneMenu(e, s)}
                 onMouseEnter={(e) => s.summary?.trim() && hoverOn('scene', s.id, e.currentTarget)} onMouseLeave={hoverOff}>
-                <FileText size={13} />
-                <span className="grow ellipsis">{s.title}</span>
+                <FileText size={13} style={s.color ? { color: s.color } : undefined} />
+                <span className="grow ellipsis" style={s.color ? { color: s.color } : undefined}>{s.title}</span>
                 <span className="status-dot" title={s.status} style={{ background: STATUS_COLOR[s.status] }} />
               </div>
             );
@@ -397,7 +400,7 @@ function Manuscript({ projectId }: { projectId: string }) {
               onMouseEnter={(e) => ch.summary?.trim() && hoverOn('chapter', ch.id, e.currentTarget)} onMouseLeave={hoverOff}>
               <ChevronRight size={12} className={'chev' + (o ? ' open' : '')} />
               {ch.color && <span className="dot" style={{ background: ch.color }} />}
-              <span className="grow ellipsis">{ch.title}</span>
+              <span className="grow ellipsis" style={ch.color ? { color: ch.color } : undefined}>{ch.title}</span>
               <span className="count">{words ? fmtNum(words) : ''}</span>
             </div>
             {o && sc.map(sceneRow)}
@@ -418,6 +421,7 @@ function Manuscript({ projectId }: { projectId: string }) {
         const text = peek.kind === 'chapter' ? chapters.find((c) => c.id === peek.id)?.summary : scenes.find((x) => x.id === peek.id)?.summary;
         return text?.trim() ? <DescPeek text={text} rect={peek.rect} onEnter={() => window.clearTimeout(peekT.current)} onLeave={hoverOff} onOpen={() => describe(peek.kind, peek.id, peek.rect)} /> : null;
       })()}
+      {sceneColorFor && <ColorDialog title={`Color for “${sceneColorFor.title}”`} value={sceneColorFor.color ?? ''} onClose={() => setSceneColorFor(null)} onPick={(c) => { void db.scenes.update(sceneColorFor.id, { color: c || undefined }); }} />}
       {colorFor && <ColorDialog title={`Color for “${colorFor.title}”`} value={colorFor.color ?? ''} onClose={() => setColorFor(null)} onPick={(c) => { void db.chapters.update(colorFor.id, { color: c, updatedAt: Date.now() }); }} />}
     </div>
   );

@@ -26,13 +26,14 @@ export function GlossaryView({ projectId, entityId }: { projectId: string; entit
     const list = (terms ?? [])
       .filter((e) => !t || [e.name, e.fields.aliases, e.fields.definition, e.fields.category].some((v) => String(v ?? '').toLowerCase().includes(t)))
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
-    // numbers get their own group at the top, in counting order (2 before 10, 1.5 before 2); other symbols go under # at the end
+    // words starting with a number are grouped by their first digit (10 and 100 go under 1), at the top in counting order; other symbols go under # at the end
     const g = new Map<string, typeof list>();
-    for (const e of list) { const L = (e.name.trim()[0] ?? '#').toUpperCase(); const k = /\p{N}/u.test(L) ? '0–9' : /\p{L}/u.test(L) ? L : '#'; g.set(k, [...(g.get(k) ?? []), e]); }
+    for (const e of list) { const L = (e.name.trim()[0] ?? '#').toUpperCase(); const k = /\p{N}/u.test(L) ? L : /\p{L}/u.test(L) ? L : '#'; g.set(k, [...(g.get(k) ?? []), e]); }
     const lead = (n: string) => parseFloat(n.trim().match(/^\d+(?:[.,]\d+)?/)?.[0].replace(',', '.') ?? 'NaN');
-    g.get('0–9')?.sort((a, b) => (lead(a.name) - lead(b.name)) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
-    const rank = (k: string) => (k === '0–9' ? 0 : k === '#' ? 2 : 1);
-    return [...g.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+    const isNum = (k: string) => /\p{N}/u.test(k);
+    for (const [k, v] of g) if (isNum(k)) v.sort((a, b) => (lead(a.name) - lead(b.name)) || a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true }));
+    const rank = (k: string) => (isNum(k) ? 0 : k === '#' ? 2 : 1);
+    return [...g.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b, undefined, { numeric: true }));
   }, [terms, q]);
   if (!terms) return null;
   const add = async () => {
@@ -51,7 +52,7 @@ export function GlossaryView({ projectId, entityId }: { projectId: string; entit
       </header>
       <form className="task-add" onSubmit={(e) => { e.preventDefault(); void add(); }}>
         <BookA size={16} className="muted" />
-        <input className="input" value={word} onChange={(e) => setWord(e.target.value)} placeholder="Add a word and press Enter, e.g. Kaer" aria-label="New word" />
+        <input className="input" value={word} onChange={(e) => setWord(e.target.value)} placeholder="Add a word, e.g. Kaer" aria-label="New word" />
         <button className="btn primary sm" disabled={!word.trim()}><Plus size={13} /> Add</button>
       </form>
       {terms.length > 6 && (
@@ -69,9 +70,9 @@ export function GlossaryView({ projectId, entityId }: { projectId: string; entit
                 <button className="icon-btn sm" title="Delete word" aria-label={`Delete ${t.name}`} onClick={async () => toastTrashed(t.name, await deleteEntity(t.id))}><Trash2 size={14} /></button>
               </div>
               <div className="row gap-s wrap term-meta">
-                <input className="input sm" defaultValue={String(t.fields.aliases ?? '')} key={'a' + String(t.fields.aliases ?? '')} placeholder="Also written as (e.g. Kaers, kaer)" aria-label="Also written as"
+                <input className="input sm" defaultValue={String(t.fields.aliases ?? '')} key={'a' + String(t.fields.aliases ?? '')} placeholder="Also written as" aria-label="Also written as"
                   onBlur={(e) => { if (e.target.value !== String(t.fields.aliases ?? '')) updateEntity(t.id, { fields: { aliases: e.target.value } }); }} />
-                <input className="input sm" defaultValue={String(t.fields.category ?? '')} key={'c' + String(t.fields.category ?? '')} placeholder="Kind (e.g. food, title)" aria-label="Kind of word"
+                <input className="input sm" defaultValue={String(t.fields.category ?? '')} key={'c' + String(t.fields.category ?? '')} placeholder="Kind (food, title…)" aria-label="Kind of word"
                   onBlur={(e) => { if (e.target.value !== String(t.fields.category ?? '')) updateEntity(t.id, { fields: { category: e.target.value } }); }} />
               </div>
               <div className="term-def"><Field long value={String(t.fields.definition ?? '')} placeholder="What it means…" onCommit={(v) => updateEntity(t.id, { fields: { definition: v } })} /></div>

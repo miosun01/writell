@@ -1,6 +1,7 @@
 import { Editor, Extension, type JSONContent, type AnyExtension } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import Highlight from '@tiptap/extension-highlight';
+import { TextStyle, Color } from '@tiptap/extension-text-style';
 import Typography from '@tiptap/extension-typography';
 import { Placeholder, CharacterCount } from '@tiptap/extensions';
 import { Markdown } from '@tiptap/markdown';
@@ -45,6 +46,8 @@ export function baseExtensions(collab = false) {
       link: { openOnClick: false, autolink: true },
     }),
     Highlight,
+    TextStyle,
+    Color,
     Typography.configure({ oneHalf: false, oneQuarter: false, threeQuarters: false }),
     Markdown,
     CommentMark,

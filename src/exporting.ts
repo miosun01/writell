@@ -168,6 +168,7 @@ export async function exportProjectDocx(projectId: string) {
       const run = new TextRun({
         text: n.text ?? '', bold: has('bold'), italics: has('italic') || extra.italics, strike: has('strike'),
         underline: has('underline') ? {} : undefined, highlight: has('highlight') ? 'yellow' : undefined,
+        color: /^#[0-9a-f]{6}$/i.test(String(n.marks?.find((m) => m.type === 'textStyle')?.attrs?.color ?? '')) ? String(n.marks!.find((m) => m.type === 'textStyle')!.attrs!.color).slice(1) : undefined,
       });
       const link = n.marks?.find((m) => m.type === 'link');
       return link ? [new ExternalHyperlink({ link: String(link.attrs?.href ?? ''), children: [run] })] as (InstanceType<typeof TextRun> | InstanceType<typeof ExternalHyperlink>)[] : [run];

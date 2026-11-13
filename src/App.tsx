@@ -48,7 +48,7 @@ import { ExportDialog } from './components/ExportDialog';
 
 const PHONE_TITLES: Record<string, string> = {
   home: 'Writell', projects: 'Projects', project: 'Overview', write: 'Write', characters: 'Character', world: 'Worldbuilding', notes: 'Notes',
-  search: 'Search', statistics: 'Statistics', trash: 'Trash', friends: 'Friends', chat: 'Chat', admin: 'Admin', tasks: 'Tasks', family: 'Tree', maps: 'Map', relationships: 'Relation', timelines: 'Timeline', revision: 'Revision',
+  search: 'Search', statistics: 'Statistics', trash: 'Trash', friends: 'Friends', chat: 'Chat', admin: 'Admin', tasks: 'Tasks', family: 'Tree', maps: 'Map', relationships: 'Relation', timelines: 'Timeline', revision: 'Revision', glossary: 'Glossary',
 };
 
 export default function App() {

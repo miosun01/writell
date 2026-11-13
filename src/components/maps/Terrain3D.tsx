@@ -366,7 +366,31 @@ if (uGrid > 0.0) { vec2 g = abs(fract(vGrainPos.xz / uGrid + 0.5) - 0.5) / fwidt
       if (o.pts) { const ps = strokePts(o); const m = ps[Math.floor(ps.length / 2)] ?? [o.u, o.v]; return { u: m[0], v: m[1] }; }
       return { u: o.u2 !== undefined ? (o.u + o.u2) / 2 : o.u, v: o.v2 !== undefined ? (o.v + (o.v2 ?? o.v)) / 2 : o.v };
     };
+    // fingers on the screen: a second finger means the camera is moving, so the tool lets go
+    const fingers = new Set<number>();
+    // a finger waits a moment before the tool starts, so a two-finger pinch doesn't leave a bump behind
+    let waiting: { e: PointerEvent; t: number } | null = null;
+    const stopWaiting = () => { if (waiting) { clearTimeout(waiting.t); waiting = null; } };
     const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        fingers.add(e.pointerId);
+        if (fingers.size > 1) {
+          stopWaiting();
+          if (drawing) { drawing = false; props.current.onStrokeEnd(); }
+          if (moving) { const m = moving; moving = null; controls.enabled = true; if (m.pv) undoPreview(m.pv); }
+          ring.visible = false; render();
+          return;
+        }
+        if (props.current.tool !== 'view' && !props.current.carryId) {
+          stopWaiting();
+          waiting = { e, t: window.setTimeout(() => { const w = waiting; waiting = null; if (w && fingers.size === 1) begin(w.e); }, 110) };
+          return;
+        }
+      }
+      begin(e);
+    };
+    const capture = (e: PointerEvent) => { try { renderer.domElement.setPointerCapture(e.pointerId); } catch { /* finger already lifted */ } };
+    const begin = (e: PointerEvent) => {
       const tool = props.current.tool;
       if (e.button === 2) { rdown = { x: e.clientX, y: e.clientY }; rightHeld = true; pendingMenu = null; }
       if (props.current.carryId) {
@@ -382,14 +406,14 @@ if (uGrid > 0.0) { vec2 g = abs(fract(vGrainPos.xz / uGrid + 0.5) - 0.5) / fwidt
         if (!id) { const l = hitLand(e); if (l) id = nearStroke(l.point); }
         props.current.onSelectObject(id);
         const h = id ? hitLand(e) : undefined;
-        if (id && h) { const g = toGrid(h.point); moving = { id, u0: g.u, v0: g.v, moved: false, pv: null, du: 0, dv: 0 }; renderer.domElement.setPointerCapture(e.pointerId); controls.enabled = false; }
+        if (id && h) { const g = toGrid(h.point); moving = { id, u0: g.u, v0: g.v, moved: false, pv: null, du: 0, dv: 0 }; capture(e); controls.enabled = false; }
         return;
       }
       const h = hitLand(e); if (!h) return;
       const g = toGrid(h.point);
       if (tool === 'pin') { props.current.onPlacePin(g.u, g.v); return; }
       if ((tool === 'object' && !props.current.drawLine) || tool === 'journey') { props.current.onPlaceObject(g.u, g.v); return; }
-      drawing = true; renderer.domElement.setPointerCapture(e.pointerId);
+      drawing = true; capture(e);
       props.current.onStroke(g.x, g.y, true);
     };
     const dragFrame = () => {
@@ -416,6 +440,8 @@ if (uGrid > 0.0) { vec2 g = abs(fract(vGrainPos.xz / uGrid + 0.5) - 0.5) / fwidt
     };
     S.current!.endCarryPreview = () => { if (carryPv) undoPreview(carryPv); carryPv = null; carryLive = null; };
     const move = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' && fingers.size > 1) return;
+      if (waiting && waiting.e.pointerId === e.pointerId && Math.hypot(e.clientX - waiting.e.clientX, e.clientY - waiting.e.clientY) > 8) { const w = waiting; stopWaiting(); begin(w.e); }
       const tool = props.current.tool;
       const cid = props.current.carryId;
       if (cid || moving) {
@@ -439,6 +465,8 @@ if (uGrid > 0.0) { vec2 g = abs(fract(vGrainPos.xz / uGrid + 0.5) - 0.5) / fwidt
       render();
     };
     const up = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' && waiting && waiting.e.pointerId === e.pointerId) { const w = waiting; stopWaiting(); if (fingers.size === 1 && e.type === 'pointerup') begin(w.e); }
+      if (e.pointerType === 'touch') { const many = fingers.size > 1; fingers.delete(e.pointerId); if (many) return; if (e.type === 'pointercancel') { if (drawing) { drawing = false; props.current.onStrokeEnd(); } return; } }
       if (e.button === 2) {
         rightHeld = false;
         if (pendingMenu && still(e.clientX, e.clientY)) props.current.onThingMenu(pendingMenu.id, pendingMenu.x, pendingMenu.y);
@@ -454,12 +482,12 @@ if (uGrid > 0.0) { vec2 g = abs(fract(vGrainPos.xz / uGrid + 0.5) - 0.5) / fwidt
     };
     const leave = () => { ring.visible = false; render(); };
     const dom = renderer.domElement;
-    dom.addEventListener('pointerdown', down); dom.addEventListener('pointermove', move); dom.addEventListener('pointerup', up); dom.addEventListener('pointerleave', leave); dom.addEventListener('contextmenu', ctx);
+    dom.addEventListener('pointerdown', down); dom.addEventListener('pointermove', move); dom.addEventListener('pointerup', up); dom.addEventListener('pointercancel', up); dom.addEventListener('pointerleave', leave); dom.addEventListener('contextmenu', ctx);
 
     return () => {
       ro.disconnect(); controls.dispose(); cancelAnimationFrame(rq); cancelAnimationFrame(walkRaf); clearTimeout(S.current?.miniT);
       window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur);
-      dom.removeEventListener('pointerdown', down); dom.removeEventListener('pointermove', move); dom.removeEventListener('pointerup', up); dom.removeEventListener('pointerleave', leave); dom.removeEventListener('contextmenu', ctx);
+      dom.removeEventListener('pointerdown', down); dom.removeEventListener('pointermove', move); dom.removeEventListener('pointerup', up); dom.removeEventListener('pointercancel', up); stopWaiting(); dom.removeEventListener('pointerleave', leave); dom.removeEventListener('contextmenu', ctx);
       scene.traverse((o) => { const m = o as THREE.Mesh; m.geometry?.dispose(); const mat = m.material as THREE.Material | THREE.Material[] | undefined; if (Array.isArray(mat)) mat.forEach((x) => x.dispose()); else mat?.dispose?.(); });
       S.current?.tex?.dispose();
       renderer.dispose(); el.innerHTML = '';
@@ -830,6 +858,8 @@ if (uGrid > 0.0) { vec2 g = abs(fract(vGrainPos.xz / uGrid + 0.5) - 0.5) / fwidt
   useEffect(() => {
     const c = S.current!.controls;
     c.mouseButtons = { LEFT: p.tool === 'view' ? THREE.MOUSE.ROTATE : (-1 as unknown as THREE.MOUSE), MIDDLE: THREE.MOUSE.DOLLY, RIGHT: p.tool === 'view' ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE };
+    // on a touch screen one finger uses the tool and two fingers move the camera (pinch to zoom, drag to slide, twist to turn)
+    c.touches = { ONE: p.tool === 'view' ? THREE.TOUCH.ROTATE : (-1 as unknown as THREE.TOUCH), TWO: THREE.TOUCH.DOLLY_PAN };
     S.current!.renderer.domElement.style.cursor = p.carryId ? 'var(--cur-move, move)' : p.tool === 'view' ? 'var(--cur-grab, grab)' : p.tool === 'pin' || p.tool === 'object' || p.tool === 'journey' ? 'var(--cur-cross, crosshair)' : p.tool === 'select' ? 'var(--cur-pointer, pointer)' : 'none';
     S.current!.ring.visible = false; S.current!.render();
   }, [p.tool, p.carryId]);

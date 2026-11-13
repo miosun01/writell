@@ -108,19 +108,61 @@ export function Map2D(p: Map2DProps) {
     setView({ k, x: mx - ((mx - view.x) * k) / view.k, y: my - ((my - view.y) * k) / view.k });
   };
 
-  return (
-    <div className="map2d" ref={wrap} onWheel={onWheel}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        const { u, v } = local(e); const id = u >= 0 && v >= 0 && u <= 1 && v <= 1 ? pickAt(u, v) : null;
-        if (!id) return;
-        if (rightHeld.current) pendingMenu.current = { id, x: e.clientX, y: e.clientY };
-        else if (still(e.clientX, e.clientY)) p.onThingMenu(id, e.clientX, e.clientY);
-      }}
-      onPointerDown={(e) => {
+  // ---- touch: one finger uses the tool, two fingers pinch to zoom and slide the map
+  type PE = { pointerId: number; pointerType: string; clientX: number; clientY: number; button: number; target: EventTarget };
+  const fingers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ d: number; wx: number; wy: number } | null>(null);
+  const waiting = useRef<{ e: PE; t: number } | null>(null);
+  const stopWaiting = () => { if (waiting.current) { clearTimeout(waiting.current.t); waiting.current = null; } };
+  const mid = () => { const [a, b] = [...fingers.current.values()]; return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1 }; };
+  const toLocal = (x: number, y: number) => { const r = wrap.current!.getBoundingClientRect(), z = uiZoom(); return { x: (x - r.left) / z, y: (y - r.top) / z }; };
+  const onDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'touch') {
+      fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (fingers.current.size >= 2) {
+        stopWaiting();
+        if (drag.current?.mode === 'draw' || drag.current?.mode === 'obj') p.onStrokeEnd();
+        drag.current = null; setCursor(null);
+        const m = mid(), l = toLocal(m.x, m.y);
+        pinch.current = { d: m.d, wx: (l.x - view.x) / view.k, wy: (l.y - view.y) / view.k };
+        return;
+      }
+      // wait a moment before the tool starts, so a two-finger pinch doesn't paint a dot
+      if (p.tool !== 'view' && !p.carryId) {
+        stopWaiting();
+        const saved: PE = { pointerId: e.pointerId, pointerType: e.pointerType, clientX: e.clientX, clientY: e.clientY, button: e.button, target: e.target };
+        waiting.current = { e: saved, t: window.setTimeout(() => { const w = waiting.current; waiting.current = null; if (w && fingers.current.size === 1) begin(w.e); }, 110) };
+        return;
+      }
+    }
+    begin(e);
+  };
+  const touchMove = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'touch') return false;
+    if (fingers.current.has(e.pointerId)) fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch.current && fingers.current.size >= 2) {
+      const m = mid(), l = toLocal(m.x, m.y), pc = pinch.current;
+      setView((v) => { const k = Math.max(0.4, Math.min(maxK, v.k * (m.d / pc.d))); pc.d = m.d; return { k, x: l.x - pc.wx * k, y: l.y - pc.wy * k }; });
+      return true;
+    }
+    const w = waiting.current;
+    if (w && w.e.pointerId === e.pointerId && Math.hypot(e.clientX - w.e.clientX, e.clientY - w.e.clientY) > 8) { stopWaiting(); begin(w.e); }
+    return false;
+  };
+  /** true when the finger was part of a pinch, so nothing else should happen */
+  const touchUp = (e: React.PointerEvent, cancel: boolean) => {
+    if (e.pointerType !== 'touch') return false;
+    const w = waiting.current;
+    if (w && w.e.pointerId === e.pointerId) { stopWaiting(); if (!cancel && fingers.current.size === 1) begin(w.e); }
+    const wasPinch = !!pinch.current;
+    fingers.current.delete(e.pointerId);
+    if (fingers.current.size < 2) pinch.current = null;
+    return wasPinch;
+  };
+  const begin = (e: PE) => {
         if (e.button === 2) { rdown.current = { x: e.clientX, y: e.clientY }; rightHeld.current = true; pendingMenu.current = null; }
         if (p.carryId) { if (e.button === 0) { carryLast.current = null; p.onCarryEnd(); } return; }
-        (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+        try { (e.target as HTMLElement).setPointerCapture?.(e.pointerId); } catch { /* finger already lifted */ }
         const pinEl = (e.target as HTMLElement).closest('[data-pin]') as HTMLElement | null;
         if (pinEl && e.button === 0) { p.onSelectPin(pinEl.dataset.pin!); drag.current = { mode: 'pin', x: e.clientX, y: e.clientY, vx: 0, vy: 0, pin: pinEl.dataset.pin }; return; }
         if (e.button !== 0 || p.tool === 'view') { drag.current = { mode: 'pan', x: e.clientX, y: e.clientY, vx: view.x, vy: view.y }; return; }
@@ -136,8 +178,20 @@ export function Map2D(p: Map2DProps) {
         }
         drag.current = { mode: 'draw', x: 0, y: 0, vx: 0, vy: 0 };
         p.onStroke(u * (p.N - 1), v * (p.N - 1), true);
+        };
+
+  return (
+    <div className="map2d" ref={wrap} onWheel={onWheel}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        const { u, v } = local(e); const id = u >= 0 && v >= 0 && u <= 1 && v <= 1 ? pickAt(u, v) : null;
+        if (!id) return;
+        if (rightHeld.current) pendingMenu.current = { id, x: e.clientX, y: e.clientY };
+        else if (still(e.clientX, e.clientY)) p.onThingMenu(id, e.clientX, e.clientY);
       }}
+      onPointerDown={onDown}
       onPointerMove={(e) => {
+        if (touchMove(e)) return;
         const d = drag.current;
         const { u, v } = local(e);
         if (p.carryId) {
@@ -155,7 +209,9 @@ export function Map2D(p: Map2DProps) {
         else if (d.mode === 'obj' && d.pin && d.u !== undefined && d.v !== undefined) { p.onMoveObject(d.pin, u - d.u, v - d.v); d.u = u; d.v = v; }
         else if (d.mode === 'pin' && d.pin && (Math.abs(e.clientX - d.x) > 3 || Math.abs(e.clientY - d.y) > 3)) p.onMovePin(d.pin, Math.max(0, Math.min(1, u)), Math.max(0, Math.min(1, v)));
       }}
+      onPointerCancel={(e) => { touchUp(e, true); if (drag.current?.mode === 'draw' || drag.current?.mode === 'obj') p.onStrokeEnd(); drag.current = null; }}
       onPointerUp={(e) => {
+        if (touchUp(e, false)) return;
         if (e.button === 2) {
           rightHeld.current = false;
           const m = pendingMenu.current; pendingMenu.current = null;

@@ -1,3 +1,4 @@
+import { doubleTap } from '../../longPress';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -161,7 +162,8 @@ function TreeCanvas({ tree, projectId }: { tree: Entity; projectId: string }) {
       <div className="canvas-tools">
         <Picker options={charOpts} exclude={members} buttonLabel="Add person" placeholder="Character…" onPick={(id) => addMember(id)} onCreate={async (n) => addMember(await newPerson(n))} />
         <button className="btn ghost sm" onClick={autoArrange} title="Re-arrange automatically by generation"><Wand2 size={13} /> Auto-arrange</button>
-        <span className="muted small">Drag from the bottom dot of one card to another to connect them · double-click a card to open the profile</span>
+        <span className="muted small hint-mouse">Drag from the bottom dot of one card to another to connect them · double-click a card to open the profile</span>
+        <span className="muted small hint-touch">Drag a card's bottom dot onto another to connect them · double-tap to open</span>
       </div>
       <div className="canvas" ref={canvasRef}>
         <ReactFlow key={flowKey} nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
@@ -172,7 +174,7 @@ function TreeCanvas({ tree, projectId }: { tree: Entity; projectId: string }) {
             for (const n of moved) p[n.id] = n.position;
             await saveDiagramPositions(tree.id, p);
           }}
-          onNodeClick={(_e, n) => { setSelNode(n.id); setSelEdge(null); }}
+          onNodeClick={(_e, n) => { setSelNode(n.id); setSelEdge(null); if (doubleTap(n.id)) { const ent = opts.byId.get(n.id); if (ent) openEntity(ent); } }} zoomOnDoubleClick={false}
           onEdgeClick={(_e, ed) => { setSelEdge(ed.id); setSelNode(null); }}
           onPaneClick={() => { setSelNode(null); setSelEdge(null); }}
           onConnect={(c) => setPending(c)}

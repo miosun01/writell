@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { installLongPress } from './longPress';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
@@ -79,4 +80,5 @@ new MutationObserver(() => {
 }).observe(document.body, { childList: true, subtree: true });
 
 document.title = 'Writell'; // the longer title in index.html is for anything that reads the page without running it
+installLongPress();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

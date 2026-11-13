@@ -1,3 +1,4 @@
+import { doubleTap } from '../../longPress';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFlowWatchdog } from './flowWatchdog';
@@ -371,7 +372,7 @@ export function RelationshipMapView({ projectId }: { projectId: string }) {
             }}
             onConnect={async (c) => { if (!c.source || !c.target || c.source === c.target || c.source.startsWith('note:') || c.target.startsWith('note:')) return; const id = await newRelationship(projectId, c.source, c.target); setSel(id); }}
             onEdgeClick={(_e, ed) => { setSel(ed.id); setSelNote(null); }} onPaneClick={() => { setSel(null); setSelNote(null); }}
-            onNodeClick={(_e, n) => { if (n.id.startsWith('note:')) { setSelNote(n.id.slice(5)); setSel(null); } else { setSelNote(null); setFocus((f) => (f === n.id ? '' : f)); } }}>
+            onNodeClick={(_e, n) => { if (n.id.startsWith('note:')) { setSelNote(n.id.slice(5)); setSel(null); } else { setSelNote(null); setFocus((f) => (f === n.id ? '' : f)); if (doubleTap(n.id) && (n.data as CData).e) openEntity((n.data as CData).e); } }} zoomOnDoubleClick={false}>
             <Background gap={24} size={1} color="var(--border)" />
             <FlowZoom min={0.05} max={2.5} />
             {nodes.length > 25 && <MiniMap pannable zoomable nodeColor={(n) => (n.type === 'char' ? colorOf((n.data as CData).e) : 'transparent')} nodeStrokeColor={(n) => (n.type === 'box' ? (n.data as NData).note.color : 'transparent')} maskColor="color-mix(in srgb, var(--bg) 70%, transparent)" style={{ background: 'var(--panel)' }} />}
@@ -389,7 +390,8 @@ export function RelationshipMapView({ projectId }: { projectId: string }) {
         {selLink && <RelationshipPanel key={selLink.id} link={selLink} opts={opts} types={TYPES} onClose={() => setSel(null)} onEditTypes={() => setEditTypes(true)} onSelect={setSel} />}
         {editTypes && <RelTypesEditor projectId={projectId} custom={custom} onClose={() => setEditTypes(false)} />}
       </div>
-      <p className="muted small canvas-hint">Drag a character's + onto another to add a relationship · click a line to edit it · double-click a picture to open the profile · Box and Text let you group people and leave yourself notes</p>
+      <p className="muted small canvas-hint hint-mouse">Drag a character's + onto another to add a relationship · click a line to edit it · double-click a picture to open the profile · Box and Text let you group people and leave yourself notes</p>
+      <p className="muted small canvas-hint hint-touch">Drag a character's + onto another to connect them · tap a line to edit it · double-tap a picture to open the profile</p>
     </div>
   );
 }

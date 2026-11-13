@@ -118,7 +118,7 @@ export interface Settings {
   pins: { projectId: string; kind: 'scene' | 'entity' | 'chapter'; id: string }[];
 }
 
-export const ALL_TOOLS = ['bold', 'italic', 'underline', 'strike', 'highlight', 'h1', 'h2', 'h3', 'bullet', 'ordered', 'quote', 'link', 'undo', 'redo'] as const;
+export const ALL_TOOLS = ['bold', 'italic', 'underline', 'strike', 'highlight', 'color', 'h1', 'h2', 'h3', 'bullet', 'ordered', 'quote', 'link', 'undo', 'redo'] as const;
 
 export const FONTS = [
   { label: 'Literata (serif)', value: "'Literata', Georgia, serif" },
@@ -186,6 +186,11 @@ function load(): Settings {
       if (!saved.sidebarV7) {
         saved.sidebarV7 = true;
         if (Array.isArray(saved.sidebarTools)) saved.sidebarTools = saved.sidebarTools.map((t: { id: string; visible: boolean }) => (t.id === 'statistics' || t.id === 'search' ? { ...t, visible: false } : t));
+      }
+      // v0.20.1: the new text colour button joins toolbars that were set up before it existed
+      if (!saved.colorToolV1) {
+        saved.colorToolV1 = true;
+        if (Array.isArray(saved.toolbar) && !saved.toolbar.includes('color')) { const i = saved.toolbar.indexOf('highlight'); saved.toolbar.splice(i < 0 ? saved.toolbar.length : i + 1, 0, 'color'); }
       }
       const merged = { ...DEFAULTS, ...saved };
       if (!merged.theme || typeof merged.theme !== 'object' || !merged.theme.bg) merged.theme = DEFAULTS.theme; // a damaged saved theme falls back to the default

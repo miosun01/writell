@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bold, Italic, Underline, Strikethrough, Highlighter, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Link2, Undo2, Redo2,
   Code2, PanelRight, X, Search, BookOpenText, Maximize2, Crosshair, AlignVerticalJustifyCenter, Camera, PenLine, MessageSquarePlus, Flag, CircleDashed, Sparkles, GitPullRequestDraft, MessagesSquare,
+  Type,
 } from 'lucide-react';
 import { ReviewPanel, addComment, toggleFlag } from './ReviewPanel';
 import { SprintButton } from './SprintButton';
@@ -35,7 +36,7 @@ import { editorExtensions, jsonToMarkdown, markdownToJson } from '../editor/exte
 import { getSettings, setSettings, useSettings } from '../settings';
 import { go, setNav, useNav } from '../nav';
 import { fmtNum, fmtReading, textStats } from '../util';
-import { promptDialog, STATUS_COLOR, STATUS_LABEL, toast } from './ui';
+import { openMenuAt, promptDialog, STATUS_COLOR, STATUS_LABEL, toast } from './ui';
 import { FindReplace } from './FindReplace';
 import { HistoryPanel } from './HistoryPanel';
 import { SceneStoryLinks } from './story/links';
@@ -446,6 +447,9 @@ export function toggleFullscreen() {
   else document.exitFullscreen?.().catch(() => {});
 }
 
+/** text colours that stay readable on light and dark pages */
+const TEXT_COLORS: [string, string][] = [['Red', '#e0525e'], ['Orange', '#e8843a'], ['Gold', '#c99a1c'], ['Green', '#3fa66b'], ['Teal', '#1f9e95'], ['Blue', '#3f86e0'], ['Purple', '#8b6cf0'], ['Pink', '#d8569d'], ['Brown', '#9a6b4f'], ['Grey', '#8a8f99']];
+
 function Toolbar({ editor, tools, extra }: { editor: Editor; tools: string[]; extra?: React.ReactNode }) {
   const [, force] = useState(0);
   useEffect(() => {
@@ -454,12 +458,30 @@ function Toolbar({ editor, tools, extra }: { editor: Editor; tools: string[]; ex
     return () => { editor.off('transaction', f); };
   }, [editor]);
   const c = () => editor.chain().focus();
-  const defs: Record<string, { icon: React.ReactNode; title: string; run: () => void; active?: boolean }> = {
+  const defs: Record<string, { icon: React.ReactNode; title: string; run: (ev: React.MouseEvent<HTMLButtonElement>) => void; active?: boolean }> = {
     bold: { icon: <Bold size={15} />, title: 'Bold (Ctrl+B, or **text**)', run: () => c().smartToggleMark('bold').run(), active: editor.isActive('bold') },
     italic: { icon: <Italic size={15} />, title: 'Italic (Ctrl+I, or *text*)', run: () => c().smartToggleMark('italic').run(), active: editor.isActive('italic') },
     underline: { icon: <Underline size={15} />, title: 'Underline (Ctrl+U)', run: () => c().smartToggleMark('underline').run(), active: editor.isActive('underline') },
     strike: { icon: <Strikethrough size={15} />, title: 'Strikethrough (Ctrl+Shift+S, or ~~text~~)', run: () => c().smartToggleMark('strike').run(), active: editor.isActive('strike') },
     highlight: { icon: <Highlighter size={15} />, title: 'Highlight (Ctrl+Shift+H, or ==text==)', run: () => c().smartToggleMark('highlight').run(), active: editor.isActive('highlight') },
+    color: { icon: <span className="tb-color"><Type size={14} /><i style={{ background: (editor.getAttributes('textStyle').color as string | undefined) || 'currentColor' }} /></span>, title: 'Text color', active: !!editor.getAttributes('textStyle').color, run: (ev) => {
+      const btn = ev.currentTarget;
+      const cur = String(editor.getAttributes('textStyle').color ?? '').toLowerCase();
+      const pick = (col: string | null) => { if (col) c().setColor(col).run(); else c().unsetColor().run(); };
+      openMenuAt(btn, [
+        { label: 'Default', icon: <span className="menu-swatch none" />, onClick: () => pick(null) },
+        ...TEXT_COLORS.map(([name, col]) => ({ label: name, icon: <span className={'menu-swatch' + (cur === col ? ' on' : '')} style={{ background: col }} />, onClick: () => pick(col) })),
+        { divider: true, label: '', onClick: () => {} },
+        { label: 'Any color…', icon: <span className="menu-swatch any" />, onClick: () => {
+          const inp = document.createElement('input'); inp.type = 'color'; inp.value = cur || '#8b7cf6';
+          inp.style.cssText = 'position:fixed;left:50%;top:40%;width:1px;height:1px;opacity:0';
+          document.body.appendChild(inp);
+          inp.addEventListener('change', () => { pick(inp.value); inp.remove(); });
+          inp.addEventListener('blur', () => setTimeout(() => inp.remove(), 500));
+          inp.click();
+        } },
+      ]);
+    } },
     h1: { icon: <Heading1 size={15} />, title: 'Heading 1 (# )', run: () => c().toggleHeading({ level: 1 }).run(), active: editor.isActive('heading', { level: 1 }) },
     h2: { icon: <Heading2 size={15} />, title: 'Heading 2 (## )', run: () => c().toggleHeading({ level: 2 }).run(), active: editor.isActive('heading', { level: 2 }) },
     h3: { icon: <Heading3 size={15} />, title: 'Heading 3 (### )', run: () => c().toggleHeading({ level: 3 }).run(), active: editor.isActive('heading', { level: 3 }) },
@@ -483,7 +505,7 @@ function Toolbar({ editor, tools, extra }: { editor: Editor; tools: string[]; ex
         return (
           <span key={t} className="row">
             {sep && <span className="tb-sep" />}
-            <button className={'tb-btn' + (d.active ? ' on' : '')} title={d.title} onClick={d.run}>{d.icon}</button>
+            <button className={'tb-btn' + (d.active ? ' on' : '')} data-tool={t} title={d.title} onClick={d.run}>{d.icon}</button>
           </span>
         );
       })}

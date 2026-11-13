@@ -68,6 +68,8 @@ export interface Scene {
   notes: string;
   order: number;
   status: Status;
+  /** colour for the scene's name in lists */
+  color?: string;
   /** ProseMirror JSON document (lossless canonical format) */
   /** shared projects only: the live co-writing document (merges everyone's edits) */
   ystate?: string;

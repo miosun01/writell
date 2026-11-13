@@ -1471,7 +1471,36 @@ html[data-cursor] :is(input, textarea, [contenteditable=true]):disabled { cursor
 [data-para="book"] .prose p + p { text-indent: 1.6em; }
 [data-para="book"] .prose :is(blockquote, ul, ol, h1, h2, h3, hr) + p { margin-top: .9em; }
 [data-para="book"] .prose p + :is(blockquote, ul, ol, hr) { margin-top: .9em; }
-/* the formatting buttons sit over the text, not at the window's edge */
-.toolbar { justify-content: center; }
+/* the formatting buttons sit over the text, not at the window's edge (auto margins, so on a phone where
+   they don't fit the first ones aren't pushed off the left edge where you can't scroll to them) */
+.toolbar > :first-child { margin-left: auto; }
+.toolbar > :last-child { margin-right: auto; }
 /* like a printed book: the first paragraph after a heading, quote, list or scene break starts flush left */
 [data-para="book"] .prose :is(h1, h2, h3, blockquote, ul, ol, hr) + p, [data-para="book"] .prose :is(h1, h2, h3, hr) + p:has(> br:only-child) + p { text-indent: 0; }
+
+/* ---- touch screens: maps, diagrams and lists aren't text to select, so a long press doesn't
+   tint them blue or pop up the phone's copy/save-image menu */
+* { -webkit-tap-highlight-color: transparent; }
+:is(.map-canvas, .canvas, .react-flow, .sidebar, .tabbar, .toolbar, .entity-list, .tl-scroll) { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+:is(.map-canvas, .canvas, .react-flow, .sidebar, .tabbar, .toolbar, .entity-list, .tl-scroll) :is(input, textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.tb-color { position: relative; display: inline-flex; flex-direction: column; align-items: center; line-height: 0; }
+.tb-color i { display: block; width: 13px; height: 3px; border-radius: 2px; margin-top: 1px; }
+.menu-swatch { display: inline-block; width: 13px; height: 13px; border-radius: 50%; }
+.menu-swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 3.5px var(--fg); }
+.menu-swatch.none { border: 1.5px solid var(--muted); background: linear-gradient(135deg, transparent 45%, var(--muted) 45% 55%, transparent 55%); }
+.menu-swatch.any { background: conic-gradient(#e0525e, #e8c547, #3fa66b, #3f86e0, #8b6cf0, #e0525e); }
+.hint-touch { display: none !important; }
+@media (pointer: coarse) { .hint-touch { display: revert !important; } .hint-mouse { display: none !important; } }
+/* phones: the overview map would sit on top of the zoom bar, and pinching does its job */
+@media (max-width: 700px) { .react-flow__minimap { display: none; } }
+/* phones: two-across fields get too narrow to read, so they stack */
+@media (max-width: 520px) {
+  .profile .fgrid { grid-template-columns: 1fr; }
+  .term-meta { flex-direction: column; }
+  .term-meta .input { min-width: 0; width: 100%; }
+}
+/* fingers need bigger dots to drag connections from */
+@media (pointer: coarse) {
+  .react-flow__handle { width: 16px !important; height: 16px !important; min-width: 16px; min-height: 16px; }
+}
