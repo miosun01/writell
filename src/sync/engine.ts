@@ -103,7 +103,7 @@ function markDirty(tbl: Tbl, id: unknown, tx: unknown) {
   setStatus({ pending: dirty.size });
   schedulePush();
 }
-function schedulePush(ms = 2000) {
+function schedulePush(ms = 1000) {
   if (!running()) return;
   window.clearTimeout(pushTimer);
   pushTimer = window.setTimeout(() => { void syncNow({ pullFirst: false }); }, ms);
@@ -177,6 +177,7 @@ async function push() {
   // one batch per destination (your private space, or a shared project)
   const batches = new Map<string, { rows: ItemRow[]; done: { k: string; st: StateRow | null }[]; bytes: number }>();
   const pinged = new Set<string>();
+  let pushedMine = false;
   const flush = async (dest: string) => {
     const b = batches.get(dest); if (!b || !b.rows.length) return;
     const { data: saved, error } = dest
@@ -189,7 +190,7 @@ async function push() {
       for (const d of b.done) { if (d.st === null) await sdb.state.delete(d.k); else await sdb.state.put({ ...d.st, seq: seqOf.get(d.k) ?? d.st.seq }); }
     });
     for (const d of b.done) if (!b.done.some((x) => x.k === d.k && x !== d && x.st !== null && d.st === null)) dirty.delete(d.k);
-    if (dest) pinged.add(dest);
+    if (dest) pinged.add(dest); else pushedMine = true;
     batches.delete(dest);
     setStatus({ pending: dirty.size });
   };
@@ -224,6 +225,7 @@ async function push() {
   }
   for (const dest of [...batches.keys()]) await flush(dest);
   for (const p of pinged) ping(p);
+  if (pushedMine) pingMine();
   setStatus({ pending: dirty.size });
   if (readOnlyEdits.size) await revertReadOnly();
 }
@@ -458,6 +460,19 @@ function subscribePings() {
     } catch { /* realtime unavailable: the regular check still runs */ }
   }
 }
+/* your other devices: a nudge (no content, just "something changed") so they fetch your edits right away
+   instead of at their next 30-second check */
+let mine: ReturnType<SupabaseClient['channel']> | null = null;
+function subscribeMine() {
+  if (mine) { void sb().removeChannel(mine); mine = null; }
+  if (!userId) return;
+  try {
+    mine = sb().channel('writell-u-' + userId, { config: { broadcast: { self: false } } });
+    mine.on('broadcast', { event: 'changed' }, () => { window.clearTimeout(pingTimer); pingTimer = window.setTimeout(() => void syncNow(), 400); });
+    mine.subscribe();
+  } catch { mine = null; /* realtime unavailable: the regular check still runs */ }
+}
+function pingMine() { try { void mine?.send({ type: 'broadcast', event: 'changed', payload: {} }); } catch { /* */ } }
 function ping(pid: string) { try { void channels.get(pid)?.send({ type: 'broadcast', event: 'changed', payload: {} }); } catch { /* */ } }
 /* other live events between members of a shared project (chat, where people are) */
 const PROJECT_EVENTS = ['chat', 'where'] as const;
@@ -511,6 +526,7 @@ async function begin(session: Session, key: CryptoKey) {
   const prevUser = await getMeta<string>('userId');
   if (prevUser && prevUser !== session.user.id) { await sdb.state.clear(); await setMeta('lastSeq', 0); await setMeta('sharedSeq', 0); await setMeta('shared', []); } // a different account on this device
   dek = key; userId = session.user.id; myPriv = null;
+  subscribeMine();
   await loadShared();
   await setMeta('dek', key); await setMeta('userId', userId);
   setStatus({ phase: 'synced', email: session.user.email ?? undefined, message: undefined });
@@ -589,7 +605,7 @@ export async function sendPasswordReset(email: string) {
 export async function signOut() {
   window.clearTimeout(pushTimer);
   try { await sb().auth.signOut(); } catch { /* offline: still forget locally */ }
-  dek = null; userId = null; dirty.clear(); myPriv = null; shared.clear(); emitShared(); subscribePings();
+  dek = null; userId = null; dirty.clear(); myPriv = null; shared.clear(); emitShared(); subscribePings(); subscribeMine();
   await sdb.meta.clear(); await sdb.state.clear();
   setStatus({ phase: 'signed-out', email: undefined, lastSync: undefined, pending: 0, message: undefined });
 }
@@ -613,9 +629,10 @@ export async function startSync() {
   if (started) return; started = true;
   installHooks();
   // keep up with other devices while open (set up first, so it also works after signing in later)
-  // every 30 s, or every 8 s while you have shared projects (friends' changes also arrive instantly when realtime works)
+  // every 10 s, or every 8 s while you have shared projects (changes also arrive within a second or two when realtime works).
+  // A check is cheap now: it lists what changed and only downloads that.
   let lastTick = 0;
-  window.setInterval(() => { const gap = shared.size ? 8_000 : 30_000; if (document.visibilityState === 'visible' && Date.now() - lastTick >= gap) { lastTick = Date.now(); void syncNow(); } }, 4_000);
+  window.setInterval(() => { const gap = shared.size ? 8_000 : 10_000; if (document.visibilityState === 'visible' && Date.now() - lastTick >= gap) { lastTick = Date.now(); void syncNow(); } }, 4_000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void syncNow(); else void syncNow({ pullFirst: false }); });
   window.addEventListener('online', () => void syncNow());
   try {
@@ -624,6 +641,7 @@ export async function startSync() {
     const { data } = await sb().auth.getSession();
     if (!data.session || !key || !uidStored || uidStored !== data.session.user.id) { setStatus({ phase: 'signed-out' }); return; }
     dek = key; userId = uidStored;
+    subscribeMine();
     await loadShared();
     setStatus({ email: data.session.user.email ?? undefined, phase: (await getMeta<boolean>('paused')) ? 'paused' : 'synced' });
     await syncNow({ scan: true });

@@ -13,7 +13,7 @@ import { matches } from '../shortcuts';
 import { confirmDialog } from './ui';
 import { AiPanel } from './AiPanel';
 import { TimelineBox } from './visual/TimelineBox';
-import { sharedKey, useSharedRoles } from '../sync/engine';
+import { sharedKey, syncNow, useSharedRoles } from '../sync/engine';
 import { getSchema } from '@tiptap/core';
 import * as Y from 'yjs';
 import Collaboration from '@tiptap/extension-collaboration';
@@ -227,7 +227,8 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
 
   // Save on unmount, tab hide, and window close.
   useEffect(() => {
-    const vis = () => { if (document.visibilityState === 'hidden') flush(); };
+    // leaving the app (phones especially): save, then upload straight away before the phone pauses the app
+    const vis = () => { if (document.visibilityState === 'hidden') void flush().then(() => syncNow({ pullFirst: false })); };
     window.addEventListener('beforeunload', flush);
     document.addEventListener('visibilitychange', vis);
     const unreg = registerFlush(flush);
