@@ -2,6 +2,21 @@
 
 Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 
+## Changes in v0.20.1 — phones, colours and smoother syncing
+
+- **No more typing lag while syncing**: each sync now downloads only what actually changed, instead of re-downloading and unlocking recent items (long scenes included) every time.
+- **Text colour**: a new colour button in the writing toolbar (10 colours, Default, or any colour). Colours carry into Word exports.
+- **Scene colours**: scenes can have a colour like chapters, and a chosen colour now tints the chapter or scene name.
+- **Phones and tablets**:
+  - Holding a finger on a chapter, scene, tab or card opens the same menu as right-click.
+  - On the maps, one finger uses the tool and two fingers move the camera (pinch to zoom); the 2D map gained pinch-to-zoom.
+  - Long-pressing the map, lists or diagrams no longer selects them or tints them blue.
+  - Bold, Italic and Underline are reachable again on narrow screens.
+  - The app fills the whole screen when opened from an iPhone home-screen icon.
+  - Family tree / relationship map: no overview map over the zoom bar, double-tap to open a profile, bigger connection dots.
+  - Fields and glossary boxes stack on narrow screens so their text fits.
+- **Glossary**: words starting with a number are grouped under their first digit (5, 1, …) instead of one "0–9" group.
+
 ## Changes in v0.20.0 — smoother writing, faster long scenes, your own roles
 
 - **Very long scenes are fast**: typing in a scene with hundreds of thousands of words no longer lags, and the few-second freezes while it saved backups are gone.
