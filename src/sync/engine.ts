@@ -33,7 +33,7 @@ type Row = { id: string; updatedAt?: number; [k: string]: unknown };
 /* ------------------------------------------------------------------ */
 class SyncDB extends Dexie {
   meta!: Table<{ key: string; value: unknown }, string>;
-  state!: Table<{ k: string; hash: string; pid?: string; dest?: string }, string>;
+  state!: Table<{ k: string; hash: string; pid?: string; dest?: string; seq?: number }, string>;
   constructor() { super('writell-sync'); this.version(1).stores({ meta: 'key', state: 'k' }); }
 }
 const sdb = new SyncDB();
@@ -147,7 +147,8 @@ async function saveShared() {
 const pidOf = (t: Tbl, row: Row) => (t === 'projects' ? row.id : String(row.projectId ?? ''));
 /** where a row is stored: '' = your private space, otherwise the shared project's id */
 const destOf = (t: Tbl, pid: string) => (t !== 'activity' && pid && shared.has(pid) ? pid : '');
-type StateRow = { k: string; hash: string; pid?: string; dest?: string };
+/** seq: the server's change number of the version this device last saw, so it isn't downloaded again */
+type StateRow = { k: string; hash: string; pid?: string; dest?: string; seq?: number };
 
 /** Compare everything with what was last synced (start-up / sign-in) */
 async function scanAll(onlyProject?: string) {
@@ -178,12 +179,14 @@ async function push() {
   const pinged = new Set<string>();
   const flush = async (dest: string) => {
     const b = batches.get(dest); if (!b || !b.rows.length) return;
-    const { error } = dest
-      ? await sb().from('writell_shared_items').upsert(b.rows.map((r) => ({ ...r, project_id: dest, updated_by: userId })), { onConflict: 'project_id,tbl,id' })
-      : await sb().from('writell_items').upsert(b.rows.map((r) => ({ ...r, user_id: userId })), { onConflict: 'user_id,tbl,id' });
+    const { data: saved, error } = dest
+      ? await sb().from('writell_shared_items').upsert(b.rows.map((r) => ({ ...r, project_id: dest, updated_by: userId })), { onConflict: 'project_id,tbl,id' }).select('tbl,id,seq')
+      : await sb().from('writell_items').upsert(b.rows.map((r) => ({ ...r, user_id: userId })), { onConflict: 'user_id,tbl,id' }).select('tbl,id,seq');
     if (error) throw error;
+    // remember the change number each upload got, so the next download skips our own copy
+    const seqOf = new Map(((saved ?? []) as { tbl: string; id: string; seq: number }[]).map((x) => [K(x.tbl, x.id), x.seq]));
     await sdb.transaction('rw', sdb.state, async () => {
-      for (const d of b.done) { if (d.st === null) await sdb.state.delete(d.k); else await sdb.state.put(d.st); }
+      for (const d of b.done) { if (d.st === null) await sdb.state.delete(d.k); else await sdb.state.put({ ...d.st, seq: seqOf.get(d.k) ?? d.st.seq }); }
     });
     for (const d of b.done) if (!b.done.some((x) => x.k === d.k && x !== d && x.st !== null && d.st === null)) dirty.delete(d.k);
     if (dest) pinged.add(dest);
@@ -239,23 +242,56 @@ async function revertReadOnly() {
   }
 }
 
-const OVERLAP = 200; // re-read a few recent changes so none slip through
+const OVERLAP = 200; // re-check a few recent changes so none slip through
+type Listed = { tbl: Tbl; id: string; seq: number; project_id?: string };
+/**
+ * Download what changed: first a list of what changed (names and change numbers only), then the
+ * contents of just the rows this device doesn't already have. Before, every sync downloaded and
+ * unlocked the last 200 rows in full, long scenes included, which froze typing for a moment.
+ */
+async function fetchChanged(shared: boolean, from: number, onlyProject?: string): Promise<{ rows: (ItemRow & { tbl: Tbl; seq: number; project_id?: string })[]; maxSeq: number }> {
+  const tableName = shared ? 'writell_shared_items' : 'writell_items';
+  const cols = shared ? 'project_id,tbl,id,seq' : 'tbl,id,seq';
+  const listed: Listed[] = [];
+  for (let cur = from; ;) {
+    let q = sb().from(tableName).select(cols).gt('seq', cur);
+    if (onlyProject) q = q.eq('project_id', onlyProject);
+    const { data, error } = await q.order('seq', { ascending: true }).limit(1000);
+    if (error) throw error;
+    const page = (data ?? []) as unknown as Listed[];
+    listed.push(...page);
+    if (page.length < 1000) break;
+    cur = page[page.length - 1].seq;
+  }
+  const maxSeq = listed.reduce((m, r) => Math.max(m, r.seq), from);
+  const known = await sdb.state.bulkGet(listed.map((r) => K(r.tbl, r.id))) as (StateRow | undefined)[];
+  const need = listed.filter((r, i) => SYNCED.includes(r.tbl) && known[i]?.seq !== r.seq);
+  if (!need.length) return { rows: [], maxSeq };
+  const wanted = new Set(need.map((r) => (r.project_id ?? '') + '\u0000' + K(r.tbl, r.id)));
+  const rows: (ItemRow & { tbl: Tbl; seq: number; project_id?: string })[] = [];
+  const ids = [...new Set(need.map((r) => r.id))];
+  for (let i = 0; i < ids.length; i += 50) {
+    let q = sb().from(tableName).select(shared ? 'project_id,tbl,id,deleted,data,seq' : 'tbl,id,deleted,data,seq').in('id', ids.slice(i, i + 50));
+    if (onlyProject) q = q.eq('project_id', onlyProject);
+    const { data, error } = await q;
+    if (error) throw error;
+    for (const r of (data ?? []) as unknown as (ItemRow & { tbl: Tbl; seq: number; project_id?: string })[]) {
+      if (wanted.has((r.project_id ?? '') + '\u0000' + K(r.tbl, r.id))) rows.push(r);
+    }
+  }
+  rows.sort((x, y) => x.seq - y.seq);
+  return { rows, maxSeq };
+}
+/** after a row is dealt with, note which version that was */
+async function noteSeq(tbl: Tbl, id: string, seq: number) {
+  const k = K(tbl, id);
+  const st = (await sdb.state.get(k)) as StateRow | undefined;
+  if (st && st.seq !== seq) await sdb.state.put({ ...st, seq });
+}
 async function pull() {
   const since = Number((await getMeta<number>('lastSeq')) ?? 0);
-  let maxSeq = since;
-  let from = Math.max(0, since - OVERLAP);
-  for (;;) {
-    const { data, error } = await sb().from('writell_items').select('tbl,id,deleted,data,seq').gt('seq', from).order('seq', { ascending: true }).limit(300);
-    if (error) throw error;
-    if (!data?.length) break;
-    for (const r of data as (ItemRow & { tbl: Tbl; seq: number })[]) {
-      maxSeq = Math.max(maxSeq, r.seq);
-      if (!SYNCED.includes(r.tbl)) continue;
-      await applyRemote(r, dek!, '');
-    }
-    from = (data[data.length - 1] as { seq: number }).seq;
-    if (data.length < 300) break;
-  }
+  const { rows, maxSeq } = await fetchChanged(false, Math.max(0, since - OVERLAP));
+  for (const r of rows) { await applyRemote(r, dek!, ''); await noteSeq(r.tbl, r.id, r.seq); }
   if (maxSeq > since) await setMeta('lastSeq', maxSeq);
 }
 
@@ -263,22 +299,12 @@ async function pull() {
 async function pullShared(onlyProject?: string) {
   if (!shared.size) return;
   const since = onlyProject ? 0 : Number((await getMeta<number>('sharedSeq')) ?? 0);
-  let maxSeq = since;
-  let from = Math.max(0, since - OVERLAP);
-  for (;;) {
-    let q = sb().from('writell_shared_items').select('project_id,tbl,id,deleted,data,seq').gt('seq', from);
-    if (onlyProject) q = q.eq('project_id', onlyProject);
-    const { data, error } = await q.order('seq', { ascending: true }).limit(300);
-    if (error) throw error;
-    if (!data?.length) break;
-    for (const r of data as (ItemRow & { tbl: Tbl; seq: number; project_id: string })[]) {
-      maxSeq = Math.max(maxSeq, r.seq);
-      const info = shared.get(r.project_id);
-      if (!info || !SYNCED.includes(r.tbl)) continue;
-      await applyRemote(r, info.key, r.project_id);
-    }
-    from = (data[data.length - 1] as { seq: number }).seq;
-    if (data.length < 300) break;
+  const { rows, maxSeq } = await fetchChanged(true, Math.max(0, since - OVERLAP), onlyProject);
+  for (const r of rows) {
+    const info = shared.get(r.project_id!);
+    if (!info) continue;
+    await applyRemote(r, info.key, r.project_id!);
+    await noteSeq(r.tbl, r.id, r.seq);
   }
   if (!onlyProject && maxSeq > since) await setMeta('sharedSeq', maxSeq);
 }

@@ -15,7 +15,12 @@ export function b64(u: Uint8Array): string {
   for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode(...u.subarray(i, i + 0x8000));
   return btoa(s);
 }
-export const unb64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+export function unb64(s: string): Uint8Array {
+  // a plain loop: Uint8Array.from(…, fn) took ~0.2 s per long scene and froze typing during sync
+  const a = atob(s), u = new Uint8Array(a.length);
+  for (let i = 0; i < a.length; i++) u[i] = a.charCodeAt(i);
+  return u;
+}
 
 export const PW_ITER = 310_000;
 const RK_ITER = 100_000;
