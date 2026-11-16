@@ -844,8 +844,10 @@ textarea.reltext-body { resize: none; border: 0; outline: none; background: tran
  * ===================================================================== */
 .phone-bar, .phone-back, .sb-backdrop { display: none; }
 @media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
-  html, body, #root { height: 100dvh; }
-  .app { height: 100dvh; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+  html, body, #root { height: 100%; }
+  /* pinned to the screen's edges rather than 100dvh: an app opened from the home screen on iPhone measures
+     100dvh without the status bar, which left an empty strip along the bottom */
+  .app { position: fixed; inset: 0; height: auto; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
   .main { display: flex; flex-direction: column; }
   .main > :not(.phone-bar):not(.exit-reading) { flex: 1; min-height: 0; }
 
