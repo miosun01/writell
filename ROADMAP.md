@@ -2,6 +2,11 @@
 
 Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 
+## Changes in v0.20.2 — sync that keeps up
+
+- **Edits show up on your other devices within seconds**: when one device uploads your writing it nudges your other signed-in devices to fetch it straight away (the nudge carries no text). As a fallback, devices now check every 10 seconds instead of 30.
+- Uploads start about a second after you stop typing, and leaving the app (switching away on a phone) saves and uploads immediately.
+
 ## Changes in v0.20.1 — phones, colours and smoother syncing
 
 - **No more typing lag while syncing**: each sync now downloads only what actually changed, instead of re-downloading and unlocking recent items (long scenes included) every time.
