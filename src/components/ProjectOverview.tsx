@@ -62,9 +62,9 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
 
       <div className="row gap-s wrap ov-actions">
         {lastScene && <button className="btn primary" onClick={() => go({ view: 'write', projectId, sceneId: lastScene.id })}><PenLine size={14} /> Continue writing</button>}
-        <button className="btn" onClick={() => setNav({ exportFor: projectId })}><FileText size={14} /> Export</button>
-        <button className="btn" onClick={() => setNav({ shareFor: projectId })}><Share2 size={14} /> {sharedRole(projectId) ? 'Shared' : 'Share'}</button>
-        <button className="btn" onClick={() => setSettingsOpen(true)}><Settings2 size={14} /> Project settings</button>
+        <button className="icon-btn bordered" title="Export" aria-label="Export" onClick={() => setNav({ exportFor: projectId })}><FileText size={16} /></button>
+        <button className={'icon-btn bordered' + (sharedRole(projectId) ? ' on' : '')} title={sharedRole(projectId) ? 'Shared' : 'Share'} aria-label="Share" onClick={() => setNav({ shareFor: projectId })}><Share2 size={16} /></button>
+        <button className="icon-btn bordered" title="Project settings" aria-label="Project settings" onClick={() => setSettingsOpen(true)}><Settings2 size={16} /></button>
       </div>
 
       <section>

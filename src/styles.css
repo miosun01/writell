@@ -922,7 +922,6 @@ textarea.reltext-body { resize: none; border: 0; outline: none; background: tran
   .editor-scroll { padding: 18px 16px 40vh; }
   .editor-column { padding-inline: 0 !important; }
   .statusbar { flex-wrap: nowrap; overflow-x: auto; gap: 12px; padding: 6px 12px; scrollbar-width: none; }
-  .statusbar > span:nth-child(2), .statusbar > span:nth-child(3) { display: none; }
   .panes.split > .pane.secondary { display: none; }
 
   /* timeline, relation, tree, map */
@@ -1549,3 +1548,9 @@ canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: no
 .split-btn > .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .split-btn > .btn:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 7px; padding-right: 7px; border-left: 1px solid color-mix(in srgb, #000 22%, transparent); }
 .input.lg { font-size: 16px; padding: 10px 12px; font-weight: 500; }
+
+.icon-btn.bordered { width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 8px; }
+.sb-words { color: inherit; font: inherit; padding: 0; border-radius: 4px; }
+.sb-words:hover { color: var(--text); }
+.save-dot { width: 7px; height: 7px; border-radius: 50%; align-self: center; background: #5fbf8f; opacity: .75; transition: background .2s, opacity .2s; }
+.save-dot.saving, .save-dot.unsaved { background: var(--muted); opacity: .6; }

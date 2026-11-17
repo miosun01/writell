@@ -116,6 +116,8 @@ function PaneInner({ scene: scene0, mode, secondary, onClose }: { scene: Scene; 
   const [findTerm, setFindTerm] = useState<string | undefined>(undefined);
   const [findOpen, setFindOpen] = useState<false | 'find' | 'replace'>(false);
   const [stats, setStats] = useState(() => textStats(''));
+  const [statDetails, setStatDetails] = useState(() => { try { return localStorage.getItem('writell.statDetails') === '1'; } catch { return false; } });
+  useEffect(() => { try { localStorage.setItem('writell.statDetails', statDetails ? '1' : '0'); } catch { /* */ } }, [statDetails]);
   const startWords = useRef<number | null>(null);
   // words typed this session / since the last save; deleting and undo never count
   const lastWords = useRef(0); const typedSession = useRef(0); const typedUnsaved = useRef(0);
@@ -441,16 +443,19 @@ function PaneInner({ scene: scene0, mode, secondary, onClose }: { scene: Scene; 
 
       {s.showStatsBar && !reading && (
         <div className="statusbar">
-          <span>{fmtNum(stats.words)} {stats.words === 1 ? 'word' : 'words'}</span>
-          <span>{fmtNum(stats.chars)} characters</span>
-          <span>{fmtNum(stats.sentences)} {stats.sentences === 1 ? 'sentence' : 'sentences'}</span>
-          <span>{fmtReading(stats.readingMinutes)} read</span>
-          {sessionWords > 0 && <span className="accent" title="Words you've typed since opening this scene. Deleting never counts against you.">+{fmtNum(sessionWords)} this session</span>}
+          <button className="sb-words" title={statDetails ? 'Hide details' : 'Characters, sentences, reading time'} aria-expanded={statDetails} onClick={() => setStatDetails((v) => !v)}>{fmtNum(stats.words)} {stats.words === 1 ? 'word' : 'words'}</button>
+          {statDetails && <>
+            <span>{fmtNum(stats.chars)} characters</span>
+            <span>{fmtNum(stats.sentences)} {stats.sentences === 1 ? 'sentence' : 'sentences'}</span>
+            <span>{fmtReading(stats.readingMinutes)} read</span>
+          </>}
+          {sessionWords > 0 && <span className="accent" title="Typed since opening this scene (deleting never counts against you)">+{fmtNum(sessionWords)}</span>}
           <span className="grow" />
           {nav.tracking && <button className="tracking-badge" onClick={() => setNav({ tracking: false })} title="Click to stop tracking">● Tracking changes</button>}
           {s.showStats && <SprintButton projectId={scene.projectId} />}
           {raw !== null && <span className="accent">Raw Markdown — switch back to apply</span>}
-          <span className={'save ' + save}>{{ saved: 'Saved', saving: 'Saving…', unsaved: 'Editing…', error: 'Save failed' }[save]}</span>
+          {save === 'error' ? <span className="save error">Save failed</span>
+            : <span className={'save-dot ' + save} title={{ saved: 'Saved', saving: 'Saving…', unsaved: 'Editing…' }[save]} aria-label={{ saved: 'Saved', saving: 'Saving', unsaved: 'Editing' }[save]} role="status" />}
         </div>
       )}
     </div>
