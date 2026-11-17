@@ -2,6 +2,14 @@
 
 Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 
+## Changes in v0.21.0 — a cleaner look
+- Less text everywhere: explanations sit behind a small ⓘ, empty pages are an icon, a few words and a button.
+- Home has one New project button (its arrow holds import, restore and join). Overview actions are icons. The editor bar shows words (click for more) and a saved dot.
+- Sidebar: Sync, Settings and Help in one row of icons; no Workspace heading. Quieter headings, softer borders throughout.
+- Phones: pages don't repeat the title from the top bar; Statistics fits the screen (tap bars and calendar days for details).
+- Maps: Redo next to Undo (Ctrl+Shift+Z / Ctrl+Y); on phones both sit on the map. No pointer effects over maps, and the pointer hides while painting.
+- Pointer trail and click effect are separate choices, with new ones: clean line, cubes, stars, bubbles, comet, rainbow / burst, pop, confetti.
+
 ## Changes in v0.20.3 — live writing on your own devices
 - Signed in, a scene open on your phone and computer updates as you type — no waiting, no Sync now.
 - Words written on two devices while one was offline are combined when it reconnects, instead of one copy replacing the other.
