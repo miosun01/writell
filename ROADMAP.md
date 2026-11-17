@@ -2,6 +2,11 @@
 
 Legend: ✅ done and tested · 🟡 partly done · ⬜ not started
 
+## Changes in v0.20.3 — live writing on your own devices
+- Signed in, a scene open on your phone and computer updates as you type — no waiting, no Sync now.
+- Words written on two devices while one was offline are combined when it reconnects, instead of one copy replacing the other.
+- Very long scenes (over 60,000 words) still sync as whole saved copies every few seconds.
+
 ## Changes in v0.20.2 — sync that keeps up
 
 - **Edits show up on your other devices within seconds**: when one device uploads your writing it nudges your other signed-in devices to fetch it straight away (the nudge carries no text). As a fallback, devices now check every 10 seconds instead of 30.
