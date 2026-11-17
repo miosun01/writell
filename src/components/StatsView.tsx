@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Flame, Target, Trophy, Timer } from 'lucide-react';
 import { db } from '../db';
 import { setSettings, useSettings } from '../settings';
@@ -18,6 +18,11 @@ export function StatsView({ scope = '' }: { scope?: string }) {
     return { words: scenes.reduce((a, x) => a + x.words, 0), chapters, scenes };
   }, [scope]);
   const [hover, setHover] = useState<string | null>(null);
+  const [dayPick, setDayPick] = useState<string | null>(null);
+  // the calendar starts scrolled to today (on a narrow screen the oldest weeks would show first)
+  const hmRef = useRef<HTMLDivElement>(null);
+  const ready = !!(projects && days && content);
+  useEffect(() => { const el = hmRef.current; if (el) el.scrollLeft = el.scrollWidth; }, [ready]);
   if (!projects || !days || !content) return null;
   const project = projects.find((p) => p.id === scope);
   const today = days.get(dayKey()) ?? 0;
@@ -87,7 +92,8 @@ export function StatsView({ scope = '' }: { scope?: string }) {
             <line x1={0} x2={600} y1={150 - (s.dailyGoal / maxBar) * 130} y2={150 - (s.dailyGoal / maxBar) * 130} stroke="var(--muted)" strokeDasharray="4 4" strokeWidth={1} />
             <text x={596} y={146 - (s.dailyGoal / maxBar) * 130} fill="var(--muted)" fontSize={10} textAnchor="end">goal {fmtNum(s.dailyGoal)}</text>
             {last30.map((x, i) => (
-              <g key={x.k} onMouseEnter={() => setHover(`${x.d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}: ${fmtNum(x.w)} words`)} onMouseLeave={() => setHover(null)}>
+              <g key={x.k} onMouseEnter={() => setHover(`${x.d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}: ${fmtNum(x.w)} words`)} onMouseLeave={() => setHover(null)}
+                onClick={() => setHover(`${x.d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}: ${fmtNum(x.w)} words`)}>
                 <rect x={i * 20 + 3} y={0} width={16} height={150} fill="transparent" />
                 <rect x={i * 20 + 3} y={150 - (x.w / maxBar) * 130} width={14} height={Math.max(x.w ? 2 : 0, (x.w / maxBar) * 130)} rx={3} fill={x.w >= s.dailyGoal ? '#5fbf8f' : 'var(--accent)'} opacity={i === 29 ? 1 : 0.8} />
               </g>
@@ -95,18 +101,19 @@ export function StatsView({ scope = '' }: { scope?: string }) {
             <text x={3} y={166} fill="var(--muted)" fontSize={10}>{last30[0].d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</text>
             <text x={597} y={166} fill="var(--muted)" fontSize={10} textAnchor="end">today</text>
           </svg>
-          <p className="muted small" style={{ minHeight: 18 }}>{hover ?? 'Hover a bar for details.'}</p>
+          <p className="muted small" style={{ minHeight: 18 }}>{hover ?? <><span className="hint-mouse">Hover a bar for details.</span><span className="hint-touch">Tap a bar for details.</span></>}</p>
         </div>
       </section>
 
       <section className="card pad" style={{ marginTop: 14 }}>
         <h3>Writing calendar</h3>
-        <div className="heatmap-scroll">
+        <div className="heatmap-scroll" ref={hmRef}>
           <div className="heatmap" style={{ gridTemplateColumns: `repeat(${Math.ceil(cells.length / 7)}, 12px)` }}>
-            {cells.map((c) => <div key={c.k} className={'hm l' + level(c.w)} title={`${c.d.toLocaleDateString()}: ${fmtNum(c.w)} words`} />)}
+            {cells.map((c) => <div key={c.k} className={'hm l' + level(c.w) + (dayPick === c.k ? ' picked' : '')} title={`${c.d.toLocaleDateString()}: ${fmtNum(c.w)} words`} onClick={() => setDayPick(dayPick === c.k ? null : c.k)} />)}
           </div>
         </div>
-        <div className="row gap-s small muted"><span>Less</span>{[0, 1, 2, 3, 4].map((l) => <div key={l} className={'hm l' + l} />)}<span>More (full square = daily goal)</span></div>
+        {dayPick && (() => { const c = cells.find((x) => x.k === dayPick); return c && <p className="small" style={{ margin: '4px 0 8px' }}>{c.d.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}: <strong>{fmtNum(c.w)} words</strong></p>; })()}
+        <div className="row gap-s small muted wrap"><span>Less</span>{[0, 1, 2, 3, 4].map((l) => <div key={l} className={'hm l' + l} />)}<span>More (full square = daily goal)</span></div>
       </section>
 
       <section className="two-col">
@@ -114,7 +121,7 @@ export function StatsView({ scope = '' }: { scope?: string }) {
           <h3>Chapter progress</h3>
           <div className="stack-bar">{statusCounts.map(({ k, n }) => n > 0 && <div key={k} style={{ width: `${(n / totalCh) * 100}%`, background: STATUS_COLOR[k] }} title={`${STATUS_LABEL[k]}: ${n}`} />)}</div>
           <div className="row gap wrap small">{statusCounts.map(({ k, n }) => <span key={k} className="row gap-s"><span className="status-dot" style={{ background: STATUS_COLOR[k] }} />{STATUS_LABEL[k]} {n}</span>)}</div>
-          <p className="muted small">{content.chapters.length} chapters · {content.scenes.length} scenes · {content.scenes.filter((x) => x.status === 'done').length} scenes done</p>
+          <p className="muted small">{content.chapters.length} chapter{content.chapters.length === 1 ? '' : 's'} · {content.scenes.length} scene{content.scenes.length === 1 ? '' : 's'} · {content.scenes.filter((x) => x.status === 'done').length} done</p>
         </div>
         <div className="card pad">
           <h3><Trophy size={15} /> Milestones</h3>
@@ -124,7 +131,7 @@ export function StatsView({ scope = '' }: { scope?: string }) {
           {!sprints.length && <p className="muted small">Start a sprint from the timer in the editor's bottom bar.</p>}
           {sprints.map((x) => {
             const mins = Math.max(1, Math.round((x.end - x.start) / 60000));
-            return <div key={x.start} className="row gap-s small"><span className="grow">{new Date(x.start).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{mins} min</span><strong>{fmtNum(x.words)} words</strong><span className="muted">{Math.round(x.words / mins)} wpm</span></div>;
+            return <div key={x.start} className="row gap-s small wrap"><span className="grow">{new Date(x.start).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{mins} min</span><strong>{fmtNum(x.words)} words</strong><span className="muted">{Math.round(x.words / mins)} wpm</span></div>;
           })}
         </div>
       </section>

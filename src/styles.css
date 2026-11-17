@@ -505,6 +505,7 @@ p { margin: 6px 0; }
 .hm { width: 12px; height: 12px; border-radius: 3px; background: var(--hover); }
 .hm.l1 { background: color-mix(in srgb, var(--accent) 30%, var(--hover)); } .hm.l2 { background: color-mix(in srgb, var(--accent) 55%, var(--hover)); }
 .hm.l3 { background: color-mix(in srgb, var(--accent) 80%, var(--hover)); } .hm.l4 { background: var(--accent); }
+.heatmap .hm { cursor: pointer; } .hm.picked { outline: 2px solid var(--text); outline-offset: 1px; }
 .stack-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--hover); margin: 6px 0 10px; }
 .milestones { display: flex; flex-wrap: wrap; gap: 6px; }
 .milestone { padding: 3px 10px; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -876,6 +877,8 @@ textarea.reltext-body { resize: none; border: 0; outline: none; background: tran
   .page-head { gap: 10px; margin-bottom: 16px; }
   .page-head > div:first-child { min-width: 0; }
   .page-head h1 { font-size: 24px; }
+  .page .two-col { grid-template-columns: minmax(0, 1fr); margin-top: 14px; }
+  .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }
   .recent-row { flex-wrap: nowrap; overflow-x: auto; }
 
@@ -1337,7 +1340,7 @@ body.fx-shake .app { animation: fx-shake .75s cubic-bezier(.36, .07, .19, .97); 
 .main-panel { position: absolute; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; animation: panel-in .14s ease-out; }
 .main-panel-bar { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--panel); }
 .main-panel-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
-.main-panel-body > * { flex: 1 0 auto; }
+.main-panel-body > * { flex: 1 0 auto; min-width: 0; width: 100%; } /* a centred page would otherwise grow as wide as its widest content */
 @keyframes panel-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .main-panel { animation: none; } }
 @media (max-width: 700px), (max-height: 500px) and (pointer: coarse) { .main-panel-bar .small { display: none; } .main-panel-bar { padding-top: max(8px, env(safe-area-inset-top)); } }
