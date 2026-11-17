@@ -10,9 +10,11 @@ import { decryptBytes, encryptBytes } from './crypto';
 import { REMOTE } from './ydoc';
 
 export type LiveStatus = 'connecting' | 'live' | 'offline';
-export function joinLive(opts: { sceneId: string; doc: Y.Doc; awareness: Awareness; key: CryptoKey; onStatus?: (s: LiveStatus) => void }) {
+export function joinLive(opts: { sceneId: string; doc: Y.Doc; awareness: Awareness; key: CryptoKey; onStatus?: (s: LiveStatus) => void; own?: string }) {
   const { sceneId, doc, awareness, key } = opts;
-  const ch = supabaseClient().channel('writell-s-' + sceneId, { config: { broadcast: { self: false } } });
+  // `own`: just your own devices (scrambled with your own key). Its value names where the scene's live history
+  // started, so two devices only ever combine histories that grew from the same text.
+  const ch = supabaseClient().channel(opts.own ? `writell-o-${sceneId}:${opts.own}` : 'writell-s-' + sceneId, { config: { broadcast: { self: false } } });
   let joined = false, closed = false;
   const send = async (event: string, bytes: Uint8Array) => {
     if (!joined || closed) return;
@@ -27,7 +29,7 @@ export function joinLive(opts: { sceneId: string; doc: Y.Doc; awareness: Awarene
     if (origin === REMOTE) return;
     void send('aw', encodeAwarenessUpdate(awareness, [...added, ...updated, ...removed]));
   };
-  awareness.on('update', onAware);
+  if (!opts.own) awareness.on('update', onAware); // your own devices don't show each other's cursors
   const recv = (fn: (b: Uint8Array) => void) => async ({ payload }: { payload: { d?: string } }) => {
     if (!payload?.d) return;
     try { fn(await decryptBytes(key, payload.d)); } catch { /* not for us / damaged */ }
@@ -35,20 +37,19 @@ export function joinLive(opts: { sceneId: string; doc: Y.Doc; awareness: Awarene
   ch.on('broadcast', { event: 'y' }, recv((b) => Y.applyUpdate(doc, b, REMOTE)));
   ch.on('broadcast', { event: 'aw' }, recv((b) => applyAwarenessUpdate(awareness, b, REMOTE)));
   // someone joined: send them what they're missing, and your cursor
-  ch.on('broadcast', { event: 'hi' }, recv((sv) => { void send('y', Y.encodeStateAsUpdate(doc, sv)); void send('aw', encodeAwarenessUpdate(awareness, [doc.clientID])); }));
+  ch.on('broadcast', { event: 'hi' }, recv((sv) => { void send('y', Y.encodeStateAsUpdate(doc, sv)); if (!opts.own) void send('aw', encodeAwarenessUpdate(awareness, [doc.clientID])); }));
   opts.onStatus?.('connecting');
   ch.subscribe((s: string) => {
     if (closed) return;
     if (s === 'SUBSCRIBED') {
       joined = true; opts.onStatus?.('live');
       void send('hi', Y.encodeStateVector(doc));
-      void send('aw', encodeAwarenessUpdate(awareness, [doc.clientID]));
+      if (!opts.own) void send('aw', encodeAwarenessUpdate(awareness, [doc.clientID]));
     } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT' || s === 'CLOSED') { joined = false; opts.onStatus?.('offline'); }
   });
   return () => {
     flush();
-    removeAwarenessStates(awareness, [doc.clientID], 'leave');
-    void send('aw', encodeAwarenessUpdate(awareness, [doc.clientID]));
+    if (!opts.own) { removeAwarenessStates(awareness, [doc.clientID], 'leave'); void send('aw', encodeAwarenessUpdate(awareness, [doc.clientID])); }
     closed = true;
     doc.off('update', onUpdate); awareness.off('update', onAware);
     window.setTimeout(() => { void supabaseClient().removeChannel(ch); }, 150);

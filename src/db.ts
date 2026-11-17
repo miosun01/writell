@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { yearFrom } from './charDates';
+import { contentHash, SOLO_LIVE_MAX } from './sync/yhash';
 
 /*
  * Writell data model. (The database keeps its original name, 'inkwell', so existing projects carry over.)
@@ -73,6 +74,9 @@ export interface Scene {
   /** ProseMirror JSON document (lossless canonical format) */
   /** shared projects only: the live co-writing document (merges everyone's edits) */
   ystate?: string;
+  /** fingerprint of the text `ystate` was saved with, and where its history started */
+  yfor?: string;
+  ylin?: string;
   content: unknown;
   /** Cached plain stats so lists don't have to parse every document */
   words: number;
@@ -318,12 +322,15 @@ const SNAPSHOT_EVERY = 5 * 60 * 1000;
 const MAX_AUTO_SNAPSHOTS = 50;
 
 /** `typed`: words written since the last save (deleting never counts against you) */
-export async function saveSceneContent(sceneId: string, content: unknown, words: number, typed?: number, ystate?: string) {
+export async function saveSceneContent(sceneId: string, content: unknown, words: number, typed?: number, y?: { ystate: string; ylin: string }) {
   await db.transaction('rw', [db.scenes, db.projects, db.activity, db.snapshots], async () => {
     const scene = await db.scenes.get(sceneId);
     if (!scene) return;
     const t = now();
-    await db.scenes.update(sceneId, { content, words, updatedAt: t, ...(ystate ? { ystate } : {}) });
+    // live mode saves its document alongside the text; a very long scene saved without it drops the old one (it would only weigh down syncing)
+    const live = y ? { ystate: y.ystate, ylin: y.ylin, yfor: contentHash(content) }
+      : scene.ystate && words > SOLO_LIVE_MAX ? { ystate: undefined, ylin: undefined, yfor: undefined } : {};
+    await db.scenes.update(sceneId, { content, words, updatedAt: t, ...live });
     await db.projects.update(scene.projectId, { updatedAt: t });
 
     const added = typed ?? words - scene.words;

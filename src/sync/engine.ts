@@ -21,7 +21,7 @@ import { createClient, type SupabaseClient, type Session } from '@supabase/supab
 import { useSyncExternalStore } from 'react';
 import { db, uid, now } from '../db';
 import { SUPABASE_KEY, SUPABASE_URL, WEB_APP_URL } from './config';
-import { mergeStates } from './ydoc';
+import { mergeStates, sameLineage, yFresh, type YFields } from './ydoc';
 import { createKeys, decryptJSON, encryptJSON, unlockWithPassword, unlockWithRecovery, rewrapWithPassword, b64, unb64, importPrivateJwk, importProjectKey, openSealed, type KeyRow } from './crypto';
 
 export const SYNCED = ['projects', 'chapters', 'scenes', 'activity', 'entities', 'links', 'files'] as const;
@@ -138,6 +138,8 @@ const emitShared = () => { sharedSnapshot = Object.fromEntries([...shared].map((
 export const useSharedRoles = () => useSyncExternalStore((l) => { sharedListeners.add(l); return () => sharedListeners.delete(l); }, () => sharedSnapshot, () => sharedSnapshot);
 export const sharedRole = (projectId: string): Role | undefined => shared.get(projectId)?.role;
 export const sharedKey = (projectId: string) => shared.get(projectId)?.key;
+/** Your own key (for live writing across your own devices), while signed in */
+export const myKey = () => dek;
 export const sharedProjectIds = () => [...shared.keys()];
 export const canEdit = (projectId: string) => { const r = shared.get(projectId)?.role; return !r || r === 'owner' || r === 'editor'; };
 async function saveShared() {
@@ -336,12 +338,13 @@ async function applyRemote(r: { tbl: Tbl; id: string; deleted: boolean; data: st
   if (hash === prev && local && !force) return;                 // already have this version
   if (local && localHash === hash) { await sdb.state.put({ k, hash, pid, dest }); dirty.delete(k); return; }
   // live co-writing scenes: combine both versions instead of choosing one
-  const ly = (local as { ystate?: string } | undefined)?.ystate, ry = (plain as { ystate?: string }).ystate;
-  if (r.tbl === 'scenes' && local && ly && ry && ly !== ry) {
+  const ly = (local as YFields | undefined)?.ystate, ry = (plain as YFields).ystate;
+  // (only when both live documents match their text and share a starting point: otherwise combining could double text up)
+  if (r.tbl === 'scenes' && local && ly && ry && ly !== ry && sameLineage(local as YFields, plain as YFields) && yFresh(local as YFields) && yFresh(plain as YFields)) {
     const m = mergeStates(ly, ry);
     if (!m.same) {
       const words = (jsonText(m.content).match(/\S+/g) ?? []).length;
-      const merged = { ...plain, content: m.content, ystate: m.ystate, words, updatedAt: Math.max(Number(local.updatedAt ?? 0), Number(plain.updatedAt ?? 0)) };
+      const merged = { ...plain, content: m.content, ystate: m.ystate, yfor: m.yfor, words, updatedAt: Math.max(Number(local.updatedAt ?? 0), Number(plain.updatedAt ?? 0)) };
       await remoteTx('scenes', () => table('scenes').put(merged));
       await sdb.state.put({ k, hash, pid, dest }); // remember theirs; ours (the merge) goes up next
       dirty.add(k); schedulePush(300);

@@ -13,13 +13,14 @@ import { matches } from '../shortcuts';
 import { confirmDialog } from './ui';
 import { AiPanel } from './AiPanel';
 import { TimelineBox } from './visual/TimelineBox';
-import { sharedKey, syncNow, useSharedRoles } from '../sync/engine';
+import { myKey, sharedKey, syncNow, useSharedRoles, useSyncStatus } from '../sync/engine';
 import { getSchema } from '@tiptap/core';
 import * as Y from 'yjs';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { ySyncPluginKey } from '@tiptap/y-tiptap';
-import { sceneDoc, encodeDoc, FIELD, REMOTE } from '../sync/ydoc';
+import { sceneDoc, encodeDoc, FIELD, REMOTE, SOLO_LIVE_MAX, sameLineage, yFresh } from '../sync/ydoc';
+import { Node as PMNode } from '@tiptap/pm/model';
 import { joinLive, Awareness, type LiveStatus } from '../sync/live';
 import { unb64 } from '../sync/crypto';
 import { useSocial, cachedProfile } from '../social/api';
@@ -56,25 +57,47 @@ export function EditorPane({ sceneId, secondary, onClose }: { sceneId: string; s
   return <SharedSwitch scene={initial} secondary={secondary} onClose={onClose} />;
 }
 
-/** In a shared project the scene opens in live co-writing mode */
+type LiveMode = 'shared' | 'solo' | undefined;
+const SIGNED_IN = new Set(['synced', 'syncing', 'offline', 'error']);
+/**
+ * In a shared project the scene opens in live co-writing mode. Your own scenes open the same way
+ * (unless they're very long): while you're signed in your other devices see the text as you type it,
+ * and words written offline on two devices are combined instead of one copy replacing the other.
+ */
 function SharedSwitch({ scene, secondary, onClose }: { scene: Scene; secondary?: boolean; onClose?: () => void }) {
   const roles = useSharedRoles();
-  const collab = !!roles[scene.projectId] && !!sharedKey(scene.projectId);
-  return <PaneInner key={scene.id + (collab ? ':live' : '')} scene={scene} collab={collab} secondary={secondary} onClose={onClose} />;
+  const mode: LiveMode = roles[scene.projectId] ? (sharedKey(scene.projectId) ? 'shared' : undefined)
+    : scene.words <= SOLO_LIVE_MAX ? 'solo' : undefined;
+  return <PaneInner key={scene.id + (mode ? ':' + mode : '')} scene={scene} mode={mode} secondary={secondary} onClose={onClose} />;
 }
 
-function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene; collab?: boolean; secondary?: boolean; onClose?: () => void }) {
+/** Bring the live document up to the saved text (when the text was changed without live mode) without losing its history */
+function catchUp(editor: Editor, content: unknown) {
+  if (editor.isDestroyed || JSON.stringify(editor.getJSON()) === JSON.stringify(content)) return;
+  try {
+    const doc = PMNode.fromJSON(editor.schema, content as Record<string, unknown>);
+    const { from } = editor.state.selection;
+    const tr = editor.state.tr.replaceWith(0, editor.state.doc.content.size, doc.content).setMeta('addToHistory', false).setMeta(CATCH_UP, true);
+    editor.view.dispatch(tr);
+    try { editor.commands.setTextSelection(Math.min(from, editor.state.doc.content.size)); } catch { /* */ }
+  } catch (e) { console.error(e); }
+}
+const CATCH_UP = 'writell-catch-up';
+
+function PaneInner({ scene: scene0, mode, secondary, onClose }: { scene: Scene; mode: LiveMode; secondary?: boolean; onClose?: () => void }) {
   // in live mode, start from the newest saved copy (the one we were handed may be older)
   const [scene] = useState(scene0);
   const social = useSocial();
   const me = social.me;
   const co = useMemo(() => {
-    if (!collab) return null;
-    const key = sharedKey(scene.projectId); if (!key) return null;
+    if (!mode) return null;
+    const key = mode === 'shared' ? sharedKey(scene.projectId) : null; if (mode === 'shared' && !key) return null;
     const schema = getSchema(editorExtensions(() => false, () => false, undefined, []));
-    const doc = sceneDoc(scene.ystate, scene.content, schema);
-    return { doc, awareness: new Awareness(doc), key };
+    const { doc, ylin, stale } = sceneDoc(scene, schema);
+    return { doc, awareness: new Awareness(doc), key, ylin, stale, shared: mode === 'shared' };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // co-writing with other people (chat, comments, cursors), not just your own devices
+  const shared = !!co?.shared;
   const [liveStatus, setLiveStatus] = useState<LiveStatus | null>(null);
   const s = useSettings();
   const nav = useNav();
@@ -124,8 +147,10 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
     extensions: editorExtensions(() => focusRef.current, () => trackRef.current, { names: () => namesRef.current, enabled: () => cardsRef.current },
       co ? [
         Collaboration.configure({ document: co.doc, field: FIELD }),
-        CollaborationCaret.configure({ provider: { awareness: co.awareness }, user: { name: me ? (me.display_name || me.username) : 'Someone', color: userColor(me?.id ?? 'x'), id: me?.id }, render: caret }),
-        SharedComments(() => anchors.current, (id) => openChatAt.current(id)),
+        ...(shared ? [
+          CollaborationCaret.configure({ provider: { awareness: co.awareness }, user: { name: me ? (me.display_name || me.username) : 'Someone', color: userColor(me?.id ?? 'x'), id: me?.id }, render: caret }),
+          SharedComments(() => anchors.current, (id) => openChatAt.current(id)),
+        ] : []),
       ] : undefined),
     content: co ? undefined : (scene.content as object),
     editorProps: { attributes: { spellcheck: String(s.spellcheck), class: 'prose', role: 'textbox', 'aria-multiline': 'true', 'aria-label': `Text of ${scene.title}` } },
@@ -142,16 +167,16 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
         const full = textStats(editor.getText({ blockSeparator: '\n\n' }));
         lastWords.current = full.words; setStats(full);
       }, words > 20000 ? 900 : 120);
-      const fromCoWriter = !!transaction.getMeta(ySyncPluginKey)?.isChangeOrigin;
+      const fromCoWriter = !!transaction.getMeta(ySyncPluginKey)?.isChangeOrigin || !!transaction.getMeta(CATCH_UP);
       // pasted or dropped-in text isn't writing, so it doesn't count toward today's words (undo/redo doesn't either)
       const ui = transaction.getMeta('uiEvent');
       const pasted = ui === 'paste' || ui === 'drop';
       if (grew > 0 && !pasted && !transaction.getMeta('history$') && !fromCoWriter) { typedSession.current += grew; typedUnsaved.current += grew; }
-      if (co && grew && !fromCoWriter && transaction.docChanged) noteEdit(scene.projectId, scene.id, titleRef.current, grew);
+      if (shared && grew && !fromCoWriter && transaction.docChanged) noteEdit(scene.projectId, scene.id, titleRef.current, grew);
       setSave('unsaved');
       pending.current = async () => {
         setSave('saving');
-        try { const typed = typedUnsaved.current; typedUnsaved.current = 0; await saveSceneContent(scene.id, editor.getJSON(), lastWords.current, typed, co ? encodeDoc(co.doc) : undefined); setSave('saved'); }
+        try { const typed = typedUnsaved.current; typedUnsaved.current = 0; await saveSceneContent(scene.id, editor.getJSON(), lastWords.current, typed, co ? { ystate: encodeDoc(co.doc), ylin: co.ylin } : undefined); setSave('saved'); }
         catch (err) { console.error(err); setSave('error'); toast('Could not save! Your text is still in the editor — try exporting a backup.'); }
       };
       window.clearTimeout(timer.current);
@@ -169,25 +194,38 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
   // live co-writing: join the scene's channel, show who's here
   useEffect(() => {
     if (!co) return;
-    const leave = joinLive({ sceneId: scene.id, doc: co.doc, awareness: co.awareness, key: co.key, onStatus: setLiveStatus });
-    return () => { leave(); window.setTimeout(() => co.doc.destroy(), 200); };
-  }, [co, scene.id]);
+    return () => { window.setTimeout(() => co.doc.destroy(), 300); };
+  }, [co]);
+  // connect while signed in (your own scenes) — the key decides who can read what's sent
+  const phase = useSyncStatus().phase;
+  const key = co ? (co.shared ? co.key : SIGNED_IN.has(phase) ? myKey() : null) : null;
   useEffect(() => {
-    if (!co || !editor || editor.isDestroyed || !me) return;
+    if (!co || !key) return;
+    const leave = joinLive({ sceneId: scene.id, doc: co.doc, awareness: co.awareness, key, onStatus: setLiveStatus, own: co.shared ? undefined : co.ylin || '-' });
+    return () => { leave(); setLiveStatus(null); };
+  }, [co, key, scene.id]);
+  // the text was changed without live mode since the live document was saved: bring it up to date
+  useEffect(() => {
+    if (!co?.stale || !editor) return;
+    const t = window.setTimeout(() => catchUp(editor, scene.content), 0);
+    return () => window.clearTimeout(t);
+  }, [co, editor]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!shared || !co || !editor || editor.isDestroyed || !me) return;
     editor.commands.updateUser({ name: me.display_name || me.username, color: userColor(me.id), id: me.id });
   }, [co, editor, me]);
   // report what you wrote to the project chat when you leave the scene
-  useEffect(() => () => { if (co) void flushEdit(scene.id); }, [co, scene.id]);
+  useEffect(() => () => { if (shared) void flushEdit(scene.id); }, [shared, scene.id]);
   // comment highlights follow the chat
-  const anchorKey = co ? JSON.stringify(chat.msgs.filter((m) => m.kind === 'comment' && !m.resolved && m.body?.sceneId === scene.id).map((m) => [m.id, m.body?.quote, m.body?.before, m.author])) : '';
+  const anchorKey = shared ? JSON.stringify(chat.msgs.filter((m) => m.kind === 'comment' && !m.resolved && m.body?.sceneId === scene.id).map((m) => [m.id, m.body?.quote, m.body?.before, m.author])) : '';
   useEffect(() => {
-    if (!co || !editor || editor.isDestroyed) return;
+    if (!shared || !editor || editor.isDestroyed) return;
     anchors.current = (JSON.parse(anchorKey || '[]') as [string, string, string, string][]).map(([id, quote, before, author]) => ({ id, quote, before, color: userColor(author) }));
     editor.view.dispatch(editor.state.tr.setMeta(sharedCommentsKey, true));
-  }, [co, editor, anchorKey]);
+  }, [shared, editor, anchorKey]);
   // "show in the text" from the chat
   useEffect(() => {
-    if (!co || !editor) return;
+    if (!shared || !editor) return;
     const run = () => {
       if (editor.isDestroyed) return;
       const id = takeReveal(scene.id); if (!id) return;
@@ -200,10 +238,10 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
     const t = window.setTimeout(run, 250);
     window.addEventListener('writell:reveal-comment', run);
     return () => { window.clearTimeout(t); window.removeEventListener('writell:reveal-comment', run); };
-  }, [co, editor, scene.id, scene.projectId]);
+  }, [shared, editor, scene.id, scene.projectId]);
   // following a co-writer: keep their cursor on screen; typing yourself stops following
   const following = useFollowing();
-  const followHere = co && following && following.pid === scene.projectId ? following.u : null;
+  const followHere = shared && co && following && following.pid === scene.projectId ? following.u : null;
   useEffect(() => {
     if (!co || !editor || !followHere) return;
     let raf = 0;
@@ -223,7 +261,7 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
     editor.view.dom.addEventListener('keydown', stop);
     return () => { cancelAnimationFrame(raf); co.awareness.off('change', keep); editor.view.dom.removeEventListener('keydown', stop); };
   }, [co, editor, followHere]);
-  const unread = useUnread(co ? scene.projectId : null);
+  const unread = useUnread(shared ? scene.projectId : null);
 
   // Save on unmount, tab hide, and window close.
   useEffect(() => {
@@ -257,7 +295,11 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
       if (co) {
         // live mode: merge the saved copy into the open document (no jumping, nothing lost)
         const f = await db.scenes.get(scene.id);
-        if (f?.ystate) Y.applyUpdate(co.doc, unb64(f.ystate), REMOTE);
+        if (!f || !editor || editor.isDestroyed) return;
+        const same = !!f.ystate && sameLineage(f, { ylin: co.ylin });
+        if (same) Y.applyUpdate(co.doc, unb64(f.ystate!), REMOTE);
+        // saved without live mode (an older version of the app, or offline): its text wins, applied as an edit
+        if ((!same || !yFresh(f)) && !pending.current) catchUp(editor, f.content);
         return;
       }
       if (pending.current) return;
@@ -328,7 +370,7 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
             <span className="muted">{chapter?.title}</span><span className="muted"> / </span>
             <input className="title-input" value={title} onChange={(e) => db.scenes.update(scene.id, { title: e.target.value })} aria-label="Scene title" />
           </div>
-          {co && <CoWriters awareness={co.awareness} status={liveStatus} projectId={scene.projectId} sceneId={scene.id} onChat={() => setDrawer('chat')} />}
+          {shared && co && <CoWriters awareness={co.awareness} status={liveStatus} projectId={scene.projectId} sceneId={scene.id} onChat={() => setDrawer('chat')} />}
           <div className="row gap-s">
             <button className={'icon-btn' + (s.focusMode ? ' on' : '')} title="Focus mode (dim other paragraphs)" onClick={() => setSettings({ focusMode: !s.focusMode })}><Crosshair size={16} /></button>
             <button className={'icon-btn' + (s.typewriter ? ' on' : '')} title="Typewriter mode (keep line centred)" onClick={() => setSettings({ typewriter: !s.typewriter })}><AlignVerticalJustifyCenter size={16} /></button>
@@ -338,7 +380,7 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
             {s.aiEnabled && <button className={'icon-btn' + (drawer === 'ai' ? ' on' : '')} title="AI assistant (optional)" onClick={() => setDrawer(drawer === 'ai' ? null : 'ai')}><Sparkles size={16} /></button>}
             {!secondary && <button className="icon-btn" title="Reading mode" onClick={() => setNav({ reading: true })}><BookOpenText size={16} /></button>}
             {!secondary && <button className="icon-btn" title="Full screen (F11 / Esc to exit)" onClick={() => toggleFullscreen()}><Maximize2 size={16} /></button>}
-            {co && <button className={'icon-btn chat-btn' + (drawer === 'chat' ? ' on' : '')} title="Project chat: messages, comments and changes" onClick={() => { setChatFocus(undefined); setDrawer(drawer === 'chat' ? null : 'chat'); }}><MessagesSquare size={16} />{unread > 0 && drawer !== 'chat' && <span className="dot-count">{unread > 9 ? '9+' : unread}</span>}</button>}
+            {shared && <button className={'icon-btn chat-btn' + (drawer === 'chat' ? ' on' : '')} title="Project chat: messages, comments and changes" onClick={() => { setChatFocus(undefined); setDrawer(drawer === 'chat' ? null : 'chat'); }}><MessagesSquare size={16} />{unread > 0 && drawer !== 'chat' && <span className="dot-count">{unread > 9 ? '9+' : unread}</span>}</button>}
             <button className={'icon-btn' + (drawer === 'details' ? ' on' : '')} title="Scene details" onClick={() => setDrawer(drawer === 'details' ? null : 'details')}><PanelRight size={16} /></button>
             <button className={'icon-btn' + (drawer === 'history' ? ' on' : '')} title="Revision history" onClick={() => setDrawer(drawer === 'history' ? null : 'history')}><Camera size={16} /></button>
             {onClose && <button className="icon-btn" title="Close split" onClick={() => { flush(); onClose(); }}><X size={16} /></button>}
@@ -389,7 +431,7 @@ function PaneInner({ scene: scene0, collab, secondary, onClose }: { scene: Scene
         </div>
         {drawer === 'details' && live && <DetailsDrawer scene={live} onClose={() => setDrawer(null)} />}
         {drawer === 'review' && editor && live && <ReviewPanel editor={editor} scene={live} onClose={() => setDrawer(null)} onFind={(t) => { setFindTerm(t); setFindOpen('find'); }} />}
-        {drawer === 'chat' && co && <ChatPanel projectId={scene.projectId} compact focusId={chatFocus} onClose={() => setDrawer(null)} />}
+        {drawer === 'chat' && shared && <ChatPanel projectId={scene.projectId} compact focusId={chatFocus} onClose={() => setDrawer(null)} />}
         {drawer === 'ai' && editor && live && <AiPanel editor={editor} scene={live} onClose={() => setDrawer(null)} />}
         {drawer === 'history' && editor && <HistoryPanel sceneId={scene.id} getCurrent={() => editor.getJSON()} onRestore={async (content) => {
           await flush(); await takeSnapshot(scene.id, 'before-restore');
