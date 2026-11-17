@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
-import { Star, MoreHorizontal, Copy, Trash2, Plus, Download, ArrowUp, ArrowDown } from 'lucide-react';
+import { Star, MoreHorizontal, Copy, Trash2, Plus, Download, ArrowUp, ArrowDown, Users } from 'lucide-react';
 import { db, now, type Entity } from '../../db';
 import { ProfileFields } from './ProfileFields';
 import { CHARACTER_LAYOUTS, CHARACTER_ROLES, CHARACTER_SECTIONS, CHARACTER_STATUS, autoColor, createEntity, deleteEntity, duplicateEntity, updateEntity } from '../../entities';
@@ -11,6 +11,7 @@ import { ColorPick, Field, ImageBox, TagEditor, useProjectOptions } from './comm
 import { EntityShell, SideBox } from './EntityShell';
 import { NotesAbout, RelatedEntities, SceneLinks } from './links';
 import { exportEntityMarkdown } from '../../exporting';
+import { Empty } from '../InfoTip';
 import { CharacterTimelineBox } from '../visual/TimelineBox';
 
 export type { CustomField } from './ProfileFields';
@@ -32,7 +33,7 @@ export function CharactersView({ projectId, entityId }: { projectId: string; ent
     <EntityShell title="Character" items={items} activeId={entityId} onOpen={(id) => go({ view: 'characters', projectId, entityId: id })}
       onNew={create} newLabel="Character"
       renderSub={(e) => [e.fields.role, e.fields.status !== 'Alive' ? e.fields.status : '', e.fields.age ? `age ${e.fields.age}` : ''].filter(Boolean).join(' · ')}
-      empty={<><h3>Your cast</h3><p className="muted">{items.length ? 'Pick a character on the left.' : 'Create your first character. Profiles can link to scenes, places and other characters.'}</p><button className="btn primary" onClick={create}><Plus size={14} /> New character</button></>}>
+      empty={<Empty icon={<Users size={28} />} title={items.length ? 'Pick a character' : 'Your cast'} tip="Profiles can link to scenes, places and other characters."><button className="btn primary" onClick={create}><Plus size={14} /> New character</button></Empty>}>
       {active && <CharacterProfile key={active.id} e={active} opts={opts} />}
     </EntityShell>
   );

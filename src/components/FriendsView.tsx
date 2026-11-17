@@ -137,7 +137,7 @@ function FindPeople({ onOpen }: { onOpen: (p: Profile) => void }) {
   }, [q]);
   return (
     <div className="col gap-s">
-      <label className="elist-search find-box"><Search size={14} /><input autoFocus placeholder="Search by username or name, e.g. @mara" value={q} onChange={(e) => setQ(e.target.value)} /></label>
+      <label className="elist-search find-box"><Search size={14} /><input autoFocus placeholder="Username or name" value={q} onChange={(e) => setQ(e.target.value)} /></label>
       {busy && <p className="muted small">Searching…</p>}
       {res && !res.length && !busy && <p className="muted small">Nobody found. Check the spelling, or ask your friend for their exact username.</p>}
       {res && <ul className="people">{res.map((p) => <PersonRow key={p.id} p={p} onOpen={onOpen}><RelationButton p={p} key={s.friendships.length + p.id} /></PersonRow>)}</ul>}

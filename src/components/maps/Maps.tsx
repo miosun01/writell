@@ -523,7 +523,7 @@ function MapEditor({ map }: { map: Entity }) {
               </button>
             ))}
           </div>
-          {opts && <Picker options={opts.characterOpts} buttonLabel="New journey" placeholder="Whose journey? Pick a character or type a name…"
+          {opts && <Picker options={opts.characterOpts} buttonLabel="New journey" placeholder="Whose journey?"
             onPick={(id) => { const c = opts.byId.get(id); const j: Journey = { id: uid(), name: c?.name ?? 'Journey', characterId: id, color: String(c?.fields.color ?? autoColor(c?.name ?? '')), stops: [] }; setJourneys([...journeys, j]); setSelJ(j.id); setTool('journey'); }}
             onCreate={(n) => { const j: Journey = { id: uid(), name: n, color: PIN_COLORS[journeys.length % PIN_COLORS.length], stops: [] }; setJourneys([...journeys, j]); setSelJ(j.id); setTool('journey'); }} />}
           {editJ && opts && (

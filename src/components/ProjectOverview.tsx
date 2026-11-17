@@ -147,7 +147,7 @@ function ProjectSettings({ projectId, onClose }: { projectId: string; onClose: (
           </>}
           {tab === 'backups' && <>
             <h3>Backup file</h3>
-            <p className="muted small">One file with everything in this project (text, characters, worldbuilding, maps, notes and attachments). Restore it on any device from Home → Restore backup.</p>
+            <p className="muted small">One file with everything in this project (text, characters, worldbuilding, maps, notes and attachments). Restore it on any device from the arrow next to New project on Home.</p>
             <button className="btn primary" onClick={async () => { if (await exportBackupFile(projectId)) toast('Backup file saved'); }}><Download size={14} /> Save backup file</button>
             <h3>Automatic backups</h3>
             <p className="muted small">A copy is kept inside the app every few minutes while you write (last 20). Restoring makes a separate copy; nothing is overwritten.</p>

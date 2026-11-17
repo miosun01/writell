@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TypePicker } from './TypePicker';
 import { useState } from 'react';
-import { Paperclip, Download, Upload, Folder, Pin, Trash2, Plus, X, Inbox, ImagePlus, FileText, BookOpen, Check, Hash, Tags } from 'lucide-react';
+import { Paperclip, Download, Upload, Folder, Pin, Trash2, Plus, X, Inbox, ImagePlus, FileText, BookOpen, Check, Hash, Tags, StickyNote } from 'lucide-react';
 import { db, uid, now, type Entity } from '../../db';
 import { saveBinary } from '../../util';
 import { NOTE_TYPES, noteTypesOf, setNoteTypes, addLink, createEntity, deleteEntity, pickImage, removeLink, updateEntity } from '../../entities';
@@ -11,6 +11,7 @@ import { Modal, confirmDialog, toast } from '../ui';
 import { Avatar, Field, Picker, TagEditor, useProjectOptions } from './common';
 import { EntityShell } from './EntityShell';
 import { openEntity } from './links';
+import { Empty } from '../InfoTip';
 import { TimelineBox } from '../visual/TimelineBox';
 
 /** Pick .txt / .md files; each becomes a note in the Inbox (a first "# Heading" becomes its title) */
@@ -75,7 +76,7 @@ export function NotesView({ projectId, entityId, filter: initial }: { projectId:
           <button className="chip" title="Turn text or Markdown files into notes (they land in the Inbox)" onClick={() => importNoteFiles(projectId)}><Upload size={11} /> Import…</button>
         </div>
       }
-      empty={<><h3>Notes & ideas</h3><p className="muted">Press <kbd>Ctrl + Shift + N</kbd> anywhere to jot an idea into the inbox without deciding where it belongs.</p><button className="btn primary" onClick={create}><Plus size={14} /> New note</button></>}>
+      empty={<Empty icon={<StickyNote size={28} />} title="Notes & ideas" tip={<>Press <kbd>Ctrl + Shift + N</kbd> anywhere to jot an idea into the inbox without deciding where it belongs.</>}><button className="btn primary" onClick={create}><Plus size={14} /> New note</button></Empty>}>
       {active ? <NoteEditor key={active.id} n={active} opts={opts} folders={folders} types={types} all={items} tagList={tagList} onManage={() => setManaging(true)} /> : undefined}
     </EntityShell>
     {managing && <ManageTags projectId={projectId} notes={items} tags={tagList} saved={project?.noteTags ?? []} onClose={() => setManaging(false)}
@@ -120,7 +121,7 @@ function NoteEditor({ n, opts, folders, types, all, tagList, onManage }: { n: En
       <div className="note-side">
       <div className="note-section">
         <div className="row"><h4 className="grow">Linked to</h4>
-          <Picker options={allOpts} exclude={linkedIds} buttonLabel="Link" placeholder="Character, place, chapter, scene…" onPick={(id) => addLink(n.projectId, 'entity', n.id, typeOf(id), id, 'about')} />
+          <Picker options={allOpts} exclude={linkedIds} buttonLabel="Link" placeholder="Link to…" onPick={(id) => addLink(n.projectId, 'entity', n.id, typeOf(id), id, 'about')} />
         </div>
         <div className="chips">
           {links?.map((l) => {

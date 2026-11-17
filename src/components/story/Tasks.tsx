@@ -9,6 +9,7 @@ import { db, type Entity } from '../../db';
 import { createEntity, deleteEntity, updateEntity } from '../../entities';
 import { go } from '../../nav';
 import { openEntity } from './links';
+import { InfoTip } from '../InfoTip';
 import { useProjectOptions } from './common';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -31,16 +32,15 @@ export function TasksView({ projectId }: { projectId: string }) {
     <div className="page tasks-page">
       <header className="page-head">
         <div>
-          <h1>Tasks</h1>
-          <p className="muted">Things to do for this book. Give one a date or point it at a chapter or character if that helps.</p>
+          <h1>Tasks <InfoTip>Things to do for this book. Give one a date, or point it at a chapter or character.</InfoTip></h1>
         </div>
       </header>
       <form className="task-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
         <ListChecks size={16} className="muted" />
-        <input className="input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a task and press Enter, e.g. Rewrite the ending of chapter 4" aria-label="New task" />
+        <input className="input" value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a task" aria-label="New task" />
         <button className="btn primary sm" disabled={!text.trim()}>Add</button>
       </form>
-      {!tasks.length && <p className="muted small">Nothing yet. Tasks you add appear here, with the ones due soonest first.</p>}
+      {!tasks.length && <p className="muted small">No tasks yet</p>}
       <ul className="task-list">
         {open.map((t) => <TaskRow key={t.id} t={t} opts={opts} />)}
       </ul>

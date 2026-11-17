@@ -9,6 +9,7 @@ import { ALL_TOOLS, EDITOR_THEMES, FONTS, THEMES, CURSORS, ACCENTS, cursorPrevie
 import { setNav, useNav } from '../nav';
 import { Modal, confirmDialog, promptDialog, toast } from './ui';
 import { isTauri, requestPersistentStorage } from '../platform';
+import { InfoTip } from './InfoTip';
 import { getBackupFolder, chooseBackupFolder } from '../backupService';
 
 const TABS = [
@@ -85,7 +86,7 @@ export function SettingsModal() {
               {s.customThemes.some((t) => t.name === s.theme.name) && <button className="btn ghost sm" onClick={() => setSettings({ customThemes: s.customThemes.filter((t) => t.name !== s.theme.name), theme: THEMES[0] })}><Trash2 size={13} /> Delete this theme</button>}
             </div>
 
-            <h3>Mouse cursor</h3>
+            <h3>Mouse cursor <InfoTip>Writell’s own pointer only changes inside Writell. Accent, Glow and Pencil follow your accent colour. Trails and click effects never show over maps.</InfoTip></h3>
             <div className="cursor-grid" role="radiogroup" aria-label="Mouse cursor">
               {CURSORS.map(({ id: v, label: l }) => (
                 <button key={v} role="radio" aria-checked={(s.mouseCursor ?? 'system') === v} className={'cursor-opt' + ((s.mouseCursor ?? 'system') === v ? ' on' : '')} onClick={() => setSettings({ mouseCursor: v })}>
@@ -94,7 +95,6 @@ export function SettingsModal() {
               ))}
             </div>
             {(s.mouseCursor ?? 'system') !== 'system' && <Slider label="Cursor size" value={s.cursorSize ?? 21} min={14} max={44} step={1} onChange={(v) => setSettings({ cursorSize: v })} fmt={(v) => v + 'px'} />}
-            <p className="muted small">Writell's own pointer only changes inside Writell; the rest of your computer keeps its usual one. Accent, Glow and Pencil follow your accent colour.</p>
             <label className="field"><span>Pointer trail</span>
               <div className="seg" role="radiogroup" aria-label="Pointer trail">
                 {TRAILS.map(([v, l]) => <button key={v} role="radio" aria-checked={(s.pointerTrail ?? 'none') === v} className={(s.pointerTrail ?? 'none') === v ? 'on' : ''} onClick={() => setSettings({ pointerTrail: v })}>{l}</button>)}
@@ -105,10 +105,8 @@ export function SettingsModal() {
                 {CLICKS.map(([v, l]) => <button key={v} role="radio" aria-checked={(s.pointerClick ?? 'none') === v} className={(s.pointerClick ?? 'none') === v ? 'on' : ''} onClick={() => setSettings({ pointerClick: v })}>{l}</button>)}
               </div>
             </label>
-            <p className="muted small">Pick one of each, or either on its own. Move the pointer around here to try them. They never show over maps.</p>
 
             <h3>Text cursor</h3>
-            <p className="muted small">The blinking line where you type.</p>
             <div className="seg" role="radiogroup" aria-label="Text cursor shape">
               {([['native', 'Browser'], ['line', 'Line'], ['bar', 'Thick'], ['block', 'Block'], ['underline', 'Underline']] as const).map(([v, l]) => (
                 <button key={v} role="radio" aria-checked={(s.caretStyle ?? 'native') === v} className={'caret-opt' + ((s.caretStyle ?? 'native') === v ? ' on' : '')} onClick={() => setSettings({ caretStyle: v })}>
@@ -128,7 +126,6 @@ export function SettingsModal() {
               </div>
             </>}
             <h3>Writing area</h3>
-            <p className="muted small">The page you write on can look different from the rest of the app.</p>
             <div className="theme-grid">
               {allEd.map((t) => (
                 <button key={t.name} className={'theme-chip' + (s.editorTheme.name.replace('*', '') === t.name ? ' on' : '')} onClick={() => setSettings({ editorTheme: t })} style={{ background: t.bg || s.theme.bg, color: t.text || s.theme.text }}>{t.name}</button>
@@ -202,14 +199,12 @@ export function SettingsModal() {
             <h3>New projects</h3>
             <label className="field"><span>Start new projects from</span>
               <select className="input" value={s.defaultTemplate} onChange={(e) => setSettings({ defaultTemplate: e.target.value })}>{TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-            <p className="muted small">You can still pick a different template each time. Export settings (font, spacing, headings) are remembered per project in the export window.</p>
           </>}
 
           {tab === 'backups' && <BackupSettings />}
 
           {tab === 'sidebar' && <>
             <h3>Project tools in the sidebar</h3>
-            <p className="muted small">Choose which tools appear under a project, and in what order.</p>
             <div className="col gap-s">
               {orderedTools(s.sidebarTools).map((t, i, arr) => (
                 <div key={t.id} className="row gap-s tool-row">
@@ -223,7 +218,6 @@ export function SettingsModal() {
             <h3>Extras</h3>
             <label className="check"><input type="checkbox" checked={s.sbRecentScenes} onChange={(e) => setSettings({ sbRecentScenes: e.target.checked })} /> Show recently opened scenes</label>
             <label className="check"><input type="checkbox" checked={s.sbRecentChars} onChange={(e) => setSettings({ sbRecentChars: e.target.checked })} /> Show recently opened characters</label>
-            <p className="muted small">Off by default to keep the sidebar simple. Favorites, pins and tabs are always there.</p>
           </>}
 
           {tab === 'ai' && <>
@@ -264,8 +258,7 @@ function BackupSettings() {
     navigator.storage?.estimate?.().then((e) => setUsage(`${((e.usage ?? 0) / 1048576).toFixed(1)} MB used`)).catch(() => {});
   }, []);
   return <>
-    <h3>Autosave</h3>
-    <p className="muted small">Every change is saved automatically a moment after you stop typing, and again whenever you switch scenes, minimise or close the app.</p>
+    <h3>Autosave <InfoTip>Every change is saved a moment after you stop typing, and again whenever you switch scenes, minimise or close the app.</InfoTip></h3>
     <Slider label="Save delay" value={s.autosaveDelay} min={200} max={3000} step={100} onChange={(v) => setSettings({ autosaveDelay: v })} fmt={(v) => (v / 1000).toFixed(1) + 's'} />
     <h3>Automatic project backups</h3>
     <Slider label="Back up every" value={s.autoBackupMinutes} min={0} max={60} step={5} onChange={(v) => setSettings({ autoBackupMinutes: v })} fmt={(v) => (v ? v + ' min' : 'off')} />
@@ -300,8 +293,7 @@ function KeyboardSettings() {
   const all = SHORTCUTS.map((x) => ({ ...x, cur: combo(x.id) }));
   const dupes = new Set(all.filter((a) => all.filter((b) => b.cur === a.cur).length > 1).map((a) => a.id));
   return <>
-    <h3>Keyboard shortcuts</h3>
-    <p className="muted small">Click a shortcut, then press the new key combination (Esc cancels). Bold, italic and other formatting keys are fixed.</p>
+    <h3>Keyboard shortcuts <InfoTip>Click a shortcut, then press the new keys (Esc cancels). Bold, italic and other formatting keys are fixed.</InfoTip></h3>
     <div className="kbd-list">
       {all.map((x) => (
         <div key={x.id} className="row gap-s kbd-row">

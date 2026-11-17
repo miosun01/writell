@@ -484,7 +484,7 @@ function RelTypesEditor({ projectId, custom, onClose }: { projectId: string; cus
           ))}
           {!list.length && <p className="muted small">No custom types yet.</p>}
         </div>
-        <div className="row gap-s"><input className="input sm grow" maxLength={40} placeholder="New type, e.g. Sworn enemies" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} /><button className="btn sm" onClick={add}><Plus size={13} /> Add</button></div>
+        <div className="row gap-s"><input className="input sm grow" maxLength={40} placeholder="New type" value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} /><button className="btn sm" onClick={add}><Plus size={13} /> Add</button></div>
         <div className="row end gap-s"><button className="btn ghost" onClick={onClose}>Cancel</button><button className="btn primary" onClick={save}>Save types</button></div>
       </div>
     </Modal>

@@ -113,7 +113,7 @@ export function CommandPalette() {
         if (e.key === 'ArrowUp') { e.preventDefault(); setSel((s) => Math.max(0, s - 1)); }
         if (e.key === 'Enter' && filtered[sel]) run(filtered[sel]);
       }}>
-        <input ref={inputRef} className="palette-input" placeholder="Search projects, chapters, scenes, text… or type a command" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input ref={inputRef} className="palette-input" placeholder="Search or type a command" value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="palette-list">
           {filtered.length === 0 && <div className="muted pad">Nothing found.</div>}
           {filtered.map((c, i) => {

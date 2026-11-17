@@ -3,6 +3,7 @@ import { BookOpen, FileText, Folder, Globe, GitBranch, Heart, Map, RotateCcw, St
 import { db, type TrashItem } from '../db';
 import { deleteForever, emptyTrash, restoreTrash } from '../trash';
 import { timeAgo } from '../util';
+import { Empty, InfoTip } from './InfoTip';
 import { confirmDialog, toast } from './ui';
 
 const KIND_LABEL: Record<string, string> = {
@@ -46,19 +47,14 @@ export function TrashView() {
     <div className="page trash-page">
       <header className="page-head">
         <div>
-          <h1>Trash</h1>
-          <p className="muted">Deleted things wait here until you remove them for good. Restoring puts back their links, family-tree spots and timeline entries too.</p>
+          <h1>Trash <InfoTip>Deleted things wait here until you remove them for good. Restoring puts back their links, family-tree spots and timeline entries too.</InfoTip></h1>
         </div>
         {items.length > 0 && <button className="btn danger-text" onClick={async () => {
           if (await confirmDialog(`Empty the trash?`, `${items.length} item${items.length > 1 ? 's are' : ' is'} removed for good. This can’t be undone.`, { danger: true, ok: 'Empty trash' })) { await emptyTrash(); toast('Trash emptied'); }
         }}><Trash2 size={14} /> Empty trash</button>}
       </header>
       {items.length === 0 ? (
-        <div className="empty-card">
-          <Trash2 size={22} className="muted" />
-          <h3>The trash is empty</h3>
-          <p className="muted">When you delete a character, place, chapter or project, it comes here first.</p>
-        </div>
+        <Empty icon={<Trash2 size={28} />} title="Trash is empty" />
       ) : (
         <ul className="trash-list">
           {items.map((it) => {

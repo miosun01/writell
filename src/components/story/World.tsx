@@ -4,7 +4,7 @@ import { Star, MoreHorizontal, Copy, Trash2, Plus, Download } from 'lucide-react
 import { db, type Entity } from '../../db';
 import { WORLD_CATEGORIES, PLACE_CATEGORIES, CUSTOM_GROUP, worldTypesOf, setWorldTypes, createEntity, deleteEntity, duplicateEntity, updateEntity, worldSections, worldLayouts, parentOf, setParent, ancestors, isInside, childCategory } from '../../entities';
 import { toastTrashed } from '../TrashView';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, X, Globe } from 'lucide-react';
 import { Picker } from './common';
 import { go } from '../../nav';
 import { openMenu, promptDialog, toast } from '../ui';
@@ -14,6 +14,7 @@ import { NotesAbout, RelatedEntities, SceneLinks } from './links';
 import { exportEntityMarkdown } from '../../exporting';
 import { TimelineBox } from '../visual/TimelineBox';
 import { TypePicker } from './TypePicker';
+import { Empty } from '../InfoTip';
 import { ProfileFields } from './ProfileFields';
 
 export function WorldView({ projectId, entityId, category }: { projectId: string; entityId?: string; category?: string }) {
@@ -44,7 +45,7 @@ export function WorldView({ projectId, entityId, category }: { projectId: string
           {['All', 'Places', ...usedCats].map((c) => <button key={c} className={'chip' + (filter === c ? ' on' : '')} onClick={() => setFilter(c)}>{c}</button>)}
         </div>
       }
-      empty={<><h3>Your world</h3><p className="muted">Places, factions, religions, magic systems, species, languages, artifacts… Each entry can link to characters, scenes and other entries.</p><button className="btn primary" onClick={create}><Plus size={14} /> New entry</button></>}>
+      empty={<Empty icon={<Globe size={28} />} title="Your world" tip="Places, factions, religions, magic systems, species, languages, artifacts… Each entry can link to characters, scenes and other entries."><button className="btn primary" onClick={create}><Plus size={14} /> New entry</button></Empty>}>
       {active && <WorldEntry key={active.id} e={active} opts={opts} types={types} all={items} />}
     </EntityShell>
   );
@@ -118,7 +119,7 @@ function WorldEntry({ e, opts, types, all }: { e: Entity; opts: NonNullable<Retu
             ))}
           </div>
           {!children.length && <p className="muted small">Add the regions, cities, districts or buildings that are part of {e.name}. You can also drag entries onto each other in the list.</p>}
-          <Picker options={opts.worldOpts.filter((o) => o.id !== e.id && !ancestors(e, byId).some((a) => a.id === o.id) && parentOf(byId.get(o.id)!) !== e.id)} buttonLabel="Add" placeholder="Existing entry, or type a new name…"
+          <Picker options={opts.worldOpts.filter((o) => o.id !== e.id && !ancestors(e, byId).some((a) => a.id === o.id) && parentOf(byId.get(o.id)!) !== e.id)} buttonLabel="Add" placeholder="Entry or new name"
             onPick={(id) => nest(id, e.id)}
             onCreate={async (n) => { const id = await createEntity(e.projectId, 'world', n, { category: childCategory(cat), parentId: e.id }); toast(`${n} added inside ${e.name}`); void id; }} />
         </SideBox>

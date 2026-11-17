@@ -18,14 +18,14 @@ export function NewProjectDialog() {
   return (
     <Modal title="New project" onClose={close}>
       <div className="pad col gap" onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') create(); }}>
-        <label className="sfield"><span>Title</span><input className="input" autoFocus value={title} placeholder="Untitled novel" onChange={(e) => setTitle(e.target.value)} /></label>
-        <label className="sfield"><span>Description (optional)</span><input className="input" value={desc} placeholder="One line about the book" onChange={(e) => setDesc(e.target.value)} /></label>
+        <input className="input lg" autoFocus value={title} placeholder="Title" aria-label="Title" onChange={(e) => setTitle(e.target.value)} />
+        <input className="input" value={desc} placeholder="One line about it (optional)" aria-label="Description" onChange={(e) => setDesc(e.target.value)} />
         <div className="sfield"><span>Start from</span>
           <div className="tpl-grid">
             {TEMPLATES.map((t) => (
-              <button key={t.id} className={'tpl' + (tpl === t.id ? ' on' : '')} onClick={() => setTpl(t.id)}>
-                <strong>{t.name}</strong><span className="muted small">{t.description}</span>
-                <span className="muted small">{t.chapters.length} chapter{t.chapters.length === 1 ? '' : 's'}{t.words ? ` · target ${fmtNum(t.words)} words` : ''}</span>
+              <button key={t.id} className={'tpl' + (tpl === t.id ? ' on' : '')} onClick={() => setTpl(t.id)} title={`${t.description}${t.words ? ` Target ${fmtNum(t.words)} words.` : ''}`}>
+                <strong>{t.name}</strong>
+                <span className="muted small">{t.chapters.length} chapter{t.chapters.length === 1 ? '' : 's'}</span>
               </button>
             ))}
           </div>

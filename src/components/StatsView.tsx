@@ -6,6 +6,7 @@ import { setSettings, useSettings } from '../settings';
 import { MILESTONES, dailyTotals, dayKey, daysAgo, getSprintLog, startOfMonth, startOfWeek, streaks, sumRange } from '../stats';
 import { STATUS_COLOR, STATUS_LABEL } from './ui';
 import { fmtNum } from '../util';
+import { InfoTip } from './InfoTip';
 import { go, getNav, setNav } from '../nav';
 
 export function StatsView({ scope = '' }: { scope?: string }) {
@@ -56,7 +57,7 @@ export function StatsView({ scope = '' }: { scope?: string }) {
   return (
     <div className="page">
       <header className="page-head">
-        <div><h1>Statistics</h1><p className="muted">Only you see these. Turn them off any time in Settings → Editor.</p></div>
+        <div><h1>Statistics <InfoTip>Only you see these. Turn them off any time in Settings → Editor.</InfoTip></h1></div>
         <select className="pill-select" value={scope} onChange={(e) => (getNav().panel?.view === 'statistics' ? setNav({ panel: { view: 'statistics', scope: e.target.value } }) : go({ view: 'statistics', scope: e.target.value }))}>
           <option value="">All projects</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
         </select>
@@ -128,7 +129,7 @@ export function StatsView({ scope = '' }: { scope?: string }) {
           <div className="milestones">{MILESTONES.map((m) => <span key={m} className={'milestone' + (reached.includes(m) ? ' on' : '')}>{m >= 1000 ? `${m / 1000}k` : m}</span>)}</div>
           {next && <p className="muted small">{fmtNum(next - content.words)} words to {fmtNum(next)}.</p>}
           <h3 style={{ marginTop: 16 }}><Timer size={15} /> Recent writing sprints</h3>
-          {!sprints.length && <p className="muted small">Start a sprint from the timer in the editor's bottom bar.</p>}
+          {!sprints.length && <p className="muted small">None yet</p>}
           {sprints.map((x) => {
             const mins = Math.max(1, Math.round((x.end - x.start) / 60000));
             return <div key={x.start} className="row gap-s small wrap"><span className="grow">{new Date(x.start).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span><span>{mins} min</span><strong>{fmtNum(x.words)} words</strong><span className="muted">{Math.round(x.words / mins)} wpm</span></div>;

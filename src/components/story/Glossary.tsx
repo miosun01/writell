@@ -8,6 +8,7 @@ import { BookA, Plus, Search, Trash2 } from 'lucide-react';
 import { db } from '../../db';
 import { createEntity, deleteEntity, updateEntity } from '../../entities';
 import { toastTrashed } from '../TrashView';
+import { InfoTip } from '../InfoTip';
 import { Field } from './common';
 
 export function GlossaryView({ projectId, entityId }: { projectId: string; entityId?: string }) {
@@ -46,19 +47,18 @@ export function GlossaryView({ projectId, entityId }: { projectId: string; entit
     <div className="page glossary-page">
       <header className="page-head">
         <div>
-          <h1>Glossary</h1>
-          <p className="muted">Words made up for your world (places, titles, foods, spells, slang) and what they mean. They're underlined in your writing; point at one to see its meaning.</p>
+          <h1>Glossary <InfoTip>Words made up for your world (places, titles, foods, spells, slang) and what they mean. They're underlined in your writing; point at one to see its meaning.</InfoTip></h1>
         </div>
       </header>
       <form className="task-add" onSubmit={(e) => { e.preventDefault(); void add(); }}>
         <BookA size={16} className="muted" />
-        <input className="input" value={word} onChange={(e) => setWord(e.target.value)} placeholder="Add a word, e.g. Kaer" aria-label="New word" />
+        <input className="input" value={word} onChange={(e) => setWord(e.target.value)} placeholder="Add a word" aria-label="New word" />
         <button className="btn primary sm" disabled={!word.trim()}><Plus size={13} /> Add</button>
       </form>
       {terms.length > 6 && (
         <label className="glossary-search"><Search size={14} className="muted" /><input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find a word or meaning…" aria-label="Find in glossary" /></label>
       )}
-      {!terms.length && <p className="muted empty-hint">No words yet. Add the first one above.</p>}
+      {!terms.length && <p className="muted empty-hint">No words yet</p>}
       {terms.length > 0 && !groups.length && <p className="muted empty-hint">Nothing matches “{q}”.</p>}
       {groups.map(([letter, list]) => (
         <section key={letter} className="glossary-group">

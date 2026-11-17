@@ -1,6 +1,6 @@
 import { editDescription } from './DescPop';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Plus, Star, MoreHorizontal, Upload, FileUp, Pencil, Copy, Archive, Trash2, ArchiveRestore, Share2, Users, LogOut, Link2, AlignLeft } from 'lucide-react';
+import { Plus, Star, MoreHorizontal, Upload, FileUp, Pencil, Copy, Archive, Trash2, ArchiveRestore, Share2, Users, LogOut, Link2, AlignLeft, BookOpen, ChevronDown } from 'lucide-react';
 import { sharedRole, useSharedRoles } from '../sync/engine';
 import { leaveProject, stopSharing, ROLE_LABEL } from '../social/share';
 import { db, duplicateProject, type Project } from '../db';
@@ -10,6 +10,7 @@ import { go, openProject, getRecentScenes, setNav } from '../nav';
 import { fmtNum, timeAgo } from '../util';
 import { confirmDialog, openMenu, promptDialog, toast } from './ui';
 import { importBackupFile, importManuscript } from '../exporting';
+import { Empty } from './InfoTip';
 import { importDocx } from '../manuscript';
 
 function useProjectWords() {
@@ -102,16 +103,16 @@ export function HomeView() {
       <header className="page-head">
         <div>
           <h1>{hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'}</h1>
-          <p className="muted">{projects.length ? `${projects.length} project${projects.length > 1 ? 's' : ''} · ${fmtNum(total)} words in total${today ? ` · ${fmtNum(today)} written today` : ''}` : 'Your writing lives on this device. Start a project to begin.'}</p>
+          <p className="muted">{projects.length ? `${projects.length} project${projects.length > 1 ? 's' : ''} · ${fmtNum(total)} words in total${today ? ` · ${fmtNum(today)} written today` : ''}` : ''}</p>
         </div>
-        <div className="row gap-s">
-          <button className="btn" onClick={(e) => openMenu(e, [
-            { label: 'Word document (.docx)', onClick: () => runImport('docx') },
-            { label: 'Markdown or text (.md, .txt)', onClick: () => runImport('manuscript') },
-          ])}><FileUp size={15} /> Import manuscript</button>
-          <button className="btn" onClick={() => runImport('backup')}><Upload size={15} /> Restore backup</button>
-          <button className="btn" onClick={() => setNav({ joinLink: '' })} title="Join a project a friend shared with you"><Link2 size={15} /> Join with a link</button>
+        <div className="split-btn">
           <button className="btn primary" onClick={newProjectFlow}><Plus size={15} /> New project</button>
+          <button className="btn primary" aria-label="More ways to start" title="Import, restore or join" onClick={(e) => openMenu(e, [
+            { label: 'Import Word (.docx)', icon: <FileUp size={14} />, onClick: () => runImport('docx') },
+            { label: 'Import Markdown or text', icon: <FileUp size={14} />, onClick: () => runImport('manuscript') },
+            { label: 'Restore a backup', icon: <Upload size={14} />, onClick: () => runImport('backup') },
+            { label: 'Join with a link', icon: <Link2 size={14} />, onClick: () => setNav({ joinLink: '' }) },
+          ])}><ChevronDown size={15} /></button>
         </div>
       </header>
 
@@ -147,10 +148,10 @@ export function HomeView() {
       <section>
         <h2 className="section-title">{projects.some((p) => p.favorite) ? 'All projects' : 'Projects'}</h2>
         {projects.length === 0 ? (
-          <div className="empty card">
-            <h3>No projects yet</h3>
-            <p className="muted">Create a project from a template, or import an existing manuscript (Word, Markdown or text). Headings become chapters.</p>
-            <button className="btn primary" onClick={newProjectFlow}><Plus size={15} /> New project</button>
+          <div className="card">
+            <Empty icon={<BookOpen size={28} />} title="No projects yet" tip="Start from a template, or import a manuscript (Word, Markdown or text) — its headings become chapters.">
+              <button className="btn primary" onClick={newProjectFlow}><Plus size={15} /> New project</button>
+            </Empty>
           </div>
         ) : (
           <div className="grid">{projects.filter((p) => !roles[p.id] || roles[p.id] === 'owner').map((p) => <ProjectCard key={p.id} p={p} words={words?.get(p.id) ?? 0} />)}</div>
