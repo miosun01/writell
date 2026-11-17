@@ -62,6 +62,9 @@ export const EDITOR_THEMES: EditorTheme[] = [
   { name: 'Sky', bg: '#eef4fa', text: '#1d2733', highlight: '#c6dcf3' },
 ];
 
+export type PointerTrail = 'none' | 'smooth' | 'dots' | 'cubes' | 'stars' | 'bubbles' | 'comet' | 'rainbow';
+export type PointerClick = 'none' | 'ripple' | 'sparkles' | 'burst' | 'pop' | 'confetti';
+
 export interface Settings {
   theme: Theme;
   customThemes: Theme[];
@@ -92,8 +95,12 @@ export interface Settings {
   mouseCursor: CursorKind;
   /** size of Writell's own pointer, px */
   cursorSize: number;
-  /** little effects that follow the pointer */
-  cursorFx: 'none' | 'ripple' | 'trail' | 'sparkle';
+  /** (old, single choice; replaced by pointerTrail + pointerClick) */
+  cursorFx?: 'none' | 'ripple' | 'trail' | 'sparkle';
+  /** a little trail that follows the pointer */
+  pointerTrail: PointerTrail;
+  /** a little effect where you click */
+  pointerClick: PointerClick;
   /** the text cursor while writing: the browser's own, or Writell's (shape, glide, blink) */
   caretStyle: 'native' | 'line' | 'bar' | 'block' | 'underline';
   caretSmooth: boolean;
@@ -152,7 +159,8 @@ const DEFAULTS: Settings = {
   editorMargin: 0,
   mouseCursor: 'system',
   cursorSize: 21,
-  cursorFx: 'none',
+  pointerTrail: 'none',
+  pointerClick: 'none',
   caretStyle: 'native',
   caretSmooth: true,
   caretBlink: 'blink',
@@ -186,6 +194,12 @@ function load(): Settings {
       if (!saved.sidebarV7) {
         saved.sidebarV7 = true;
         if (Array.isArray(saved.sidebarTools)) saved.sidebarTools = saved.sidebarTools.map((t: { id: string; visible: boolean }) => (t.id === 'statistics' || t.id === 'search' ? { ...t, visible: false } : t));
+      }
+      // trail and click effects used to be one choice: keep what was picked
+      if (saved.pointerTrail === undefined && saved.pointerClick === undefined && saved.cursorFx) {
+        const old = saved.cursorFx;
+        saved.pointerTrail = old === 'trail' ? 'dots' : 'none';
+        saved.pointerClick = old === 'ripple' || old === 'trail' ? 'ripple' : old === 'sparkle' ? 'sparkles' : 'none';
       }
       // v0.20.1: the new text colour button joins toolbars that were set up before it existed
       if (!saved.colorToolV1) {

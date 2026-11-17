@@ -595,6 +595,7 @@ p { margin: 6px 0; }
 .map2d-stage { position: absolute; inset: 0; transform-origin: 0 0; display: grid; place-items: center; }
 .map2d-board { position: relative; width: min(94cqw, 94cqh * var(--a, 1)); max-height: 94cqh; box-shadow: 0 6px 30px rgba(0,0,0,.35); border-radius: 4px; }
 .map2d-board canvas { width: 100%; height: 100%; display: block; border-radius: 4px; }
+.map2d.brushing, .map2d.brushing * { cursor: none !important; } /* only the brush circle shows while painting or erasing */
 .map2d-brush { position: absolute; border: 1.5px solid #fff; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 0 1px rgba(0,0,0,.4); }
 .map2d-pin { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 2px; transform-origin: 50% 100%; cursor: var(--cur-pointer, pointer); }
 .map2d-pin .pin-label { font: 600 12px var(--ui-font); color: #fff; background: rgba(15,16,20,.72); padding: 1px 7px; border-radius: 99px; white-space: nowrap; order: -1; }
@@ -1402,6 +1403,20 @@ body.fx-shake .app { animation: fx-shake .75s cubic-bezier(.36, .07, .19, .97); 
 @keyframes cfx-trail { to { transform: scale(.2); opacity: 0; } }
 .cfx-spark { position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); animation: cfx-spark .6s ease-out forwards; }
 @keyframes cfx-spark { from { transform: translate(0, 0) scale(1); opacity: 1; } to { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
+.cfx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cfx-cube { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius: 2px; background: var(--accent); opacity: .75; animation: cfx-cube .7s ease-in forwards; }
+@keyframes cfx-cube { from { transform: rotate(0) scale(1); } to { transform: translate(var(--dx), 26px) rotate(var(--r)) scale(.35); opacity: 0; } }
+.cfx-star { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); background: var(--accent); opacity: .9;
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); animation: cfx-star .75s ease-out forwards; }
+@keyframes cfx-star { from { transform: rotate(0) scale(1); } to { transform: translate(var(--dx), 14px) rotate(var(--r)) scale(.2); opacity: 0; } }
+.cfx-bubble { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); border-radius: 50%; border: 1.5px solid var(--accent); opacity: .7; animation: cfx-bubble .9s ease-out forwards; }
+@keyframes cfx-bubble { to { transform: translate(var(--dx), -30px) scale(1.4); opacity: 0; } }
+.cfx-pop { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--accent); animation: cfx-pop .45s ease-out forwards; }
+@keyframes cfx-pop { from { transform: scale(.2); opacity: .55; } to { transform: scale(2.2); opacity: 0; } }
+.cfx-ray { position: absolute; width: 2px; height: 9px; margin: -4.5px 0 0 -1px; border-radius: 2px; background: var(--accent); transform: rotate(var(--r)) translateY(-8px); animation: cfx-ray .42s ease-out forwards; }
+@keyframes cfx-ray { to { transform: rotate(var(--r)) translateY(-24px) scaleY(.4); opacity: 0; } }
+.cfx-confetti { position: absolute; width: 6px; height: 4px; margin: -2px 0 0 -3px; background: var(--c); animation: cfx-confetti .8s cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes cfx-confetti { 60% { opacity: 1; } to { transform: translate(var(--dx), calc(var(--dy) + 34px)) rotate(var(--r)); opacity: 0; } }
 .accent-row { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 10px 0 4px; }
 .accent-row .muted { margin-right: 4px; }
 .accent-row .swatch.big { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); transition: transform .1s; }

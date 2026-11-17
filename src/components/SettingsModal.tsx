@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { TRAILS, CLICKS } from './CursorFx';
 import { Palette, Type, Save, Info, Trash2, PanelLeft, Sparkles, ArrowUp, ArrowDown, Keyboard, FolderOpen, Cloud } from 'lucide-react';
 import { AccountSettings } from './AccountSettings';
 import { SHORTCUTS, combo, comboFromEvent } from '../shortcuts';
@@ -94,11 +95,17 @@ export function SettingsModal() {
             </div>
             {(s.mouseCursor ?? 'system') !== 'system' && <Slider label="Cursor size" value={s.cursorSize ?? 21} min={14} max={44} step={1} onChange={(v) => setSettings({ cursorSize: v })} fmt={(v) => v + 'px'} />}
             <p className="muted small">Writell's own pointer only changes inside Writell; the rest of your computer keeps its usual one. Accent, Glow and Pencil follow your accent colour.</p>
-            <label className="field"><span>Pointer effect</span>
-              <div className="seg" role="radiogroup" aria-label="Pointer effect">
-                {([['none', 'None'], ['ripple', 'Click ripple'], ['trail', 'Trail'], ['sparkle', 'Sparkles']] as const).map(([v, l]) => <button key={v} role="radio" aria-checked={(s.cursorFx ?? 'none') === v} className={(s.cursorFx ?? 'none') === v ? 'on' : ''} onClick={() => setSettings({ cursorFx: v })}>{l}</button>)}
+            <label className="field"><span>Pointer trail</span>
+              <div className="seg" role="radiogroup" aria-label="Pointer trail">
+                {TRAILS.map(([v, l]) => <button key={v} role="radio" aria-checked={(s.pointerTrail ?? 'none') === v} className={(s.pointerTrail ?? 'none') === v ? 'on' : ''} onClick={() => setSettings({ pointerTrail: v })}>{l}</button>)}
               </div>
             </label>
+            <label className="field"><span>Click effect</span>
+              <div className="seg" role="radiogroup" aria-label="Click effect">
+                {CLICKS.map(([v, l]) => <button key={v} role="radio" aria-checked={(s.pointerClick ?? 'none') === v} className={(s.pointerClick ?? 'none') === v ? 'on' : ''} onClick={() => setSettings({ pointerClick: v })}>{l}</button>)}
+              </div>
+            </label>
+            <p className="muted small">Pick one of each, or either on its own. Move the pointer around here to try them. They never show over maps.</p>
 
             <h3>Text cursor</h3>
             <p className="muted small">The blinking line where you type.</p>

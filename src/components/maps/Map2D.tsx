@@ -181,7 +181,7 @@ export function Map2D(p: Map2DProps) {
         };
 
   return (
-    <div className="map2d" ref={wrap} onWheel={onWheel}
+    <div className={'map2d' + (!p.carryId && !['view', 'pin', 'object', 'journey', 'select'].includes(p.tool) ? ' brushing' : '')} ref={wrap} onWheel={onWheel}
       onContextMenu={(e) => {
         e.preventDefault();
         const { u, v } = local(e); const id = u >= 0 && v >= 0 && u <= 1 && v <= 1 ? pickAt(u, v) : null;
