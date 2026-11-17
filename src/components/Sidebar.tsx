@@ -93,7 +93,7 @@ export function Sidebar() {
             {staff && <WsBtn label="Admin" icon={Shield} active={panel?.view === 'admin'} onClick={() => togglePanel({ view: 'admin' })} />}
           </div>
         ) : (
-          <Section id="workspace" label="Workspace" collapsed={collapsed} toggle={toggle} icon={icon}>
+          <Section id="workspace" label="" collapsed={collapsed} toggle={toggle} icon={icon}>
             <Item label="Home" icon={Home} active={route.view === 'home'} onClick={() => go({ view: 'home' })} />
             <Item label="Projects" icon={LayoutGrid} active={route.view === 'projects'} onClick={() => go({ view: 'projects' })} />
             {s.showStats && <Item label="Statistics" icon={BarChart3} active={route.view === 'statistics'} onClick={() => go({ view: 'statistics', ...(project ? { scope: project.id } : {}) })} />}
@@ -153,11 +153,19 @@ export function Sidebar() {
         {!icon && s.sbRecentScenes && <RecentScenes />}
       </div>
 
-      <div className="sb-bottom">
-        <SyncBadge iconOnly={icon} onOpen={() => setNav({ settingsOpen: true, settingsTab: 'account' })} />
-        <Item label="Settings" icon={Cog} onClick={() => setNav({ settingsOpen: true })} />
-        <Item label="Help & shortcuts" icon={HelpCircle} onClick={() => setNav({ helpOpen: true })} />
-      </div>
+      {icon ? (
+        <div className="sb-bottom">
+          <SyncBadge iconOnly onOpen={() => setNav({ settingsOpen: true, settingsTab: 'account' })} />
+          <Item label="Settings" icon={Cog} onClick={() => setNav({ settingsOpen: true })} />
+          <Item label="Help & shortcuts" icon={HelpCircle} onClick={() => setNav({ helpOpen: true })} />
+        </div>
+      ) : (
+        <div className="sb-bottom sb-bottom-row">
+          <SyncBadge iconOnly onOpen={() => setNav({ settingsOpen: true, settingsTab: 'account' })} />
+          <WsBtn label="Settings" icon={Cog} onClick={() => setNav({ settingsOpen: true })} />
+          <WsBtn label="Help & shortcuts" icon={HelpCircle} onClick={() => setNav({ helpOpen: true })} />
+        </div>
+      )}
       {!icon && <div className="resizer" onMouseDown={() => { dragging.current = true; document.body.classList.add('resizing'); }} onDoubleClick={() => setSettings({ sidebarWidth: 260 })} />}
     </aside>
   );
@@ -170,10 +178,10 @@ async function switchProjectMenu(e: React.MouseEvent) {
 }
 
 function Section({ id, label, children, collapsed, toggle, icon, action }: { id: string; label: string; children: React.ReactNode; collapsed: Record<string, boolean>; toggle: (k: string) => void; icon: boolean; action?: React.ReactNode }) {
-  const closed = collapsed[id] && !icon;
+  const closed = collapsed[id] && !icon && !!label; // a section without a heading can't be folded away
   return (
     <div className="sb-section">
-      {!icon ? (
+      {!icon ? (label &&
         <div className="sb-label">
           <button onClick={() => toggle(id)}><ChevronRight size={12} className={'chev' + (closed ? '' : ' open')} /> <span>{label}</span></button>
           {action}

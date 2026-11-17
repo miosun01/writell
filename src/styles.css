@@ -1554,3 +1554,8 @@ canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: no
 .sb-words:hover { color: var(--text); }
 .save-dot { width: 7px; height: 7px; border-radius: 50%; align-self: center; background: #5fbf8f; opacity: .75; transition: background .2s, opacity .2s; }
 .save-dot.saving, .save-dot.unsaved { background: var(--muted); opacity: .6; }
+
+.sb-bottom-row { display: flex; gap: 2px; }
+.sb-bottom-row > * { flex: 1; }
+.sb-bottom-row .sync-badge { justify-content: center; padding: 0; height: 32px; position: relative; min-height: 0; }
+.sb-bottom-row .sync-badge .sync-dot { position: absolute; top: 6px; left: calc(50% + 5px); }
