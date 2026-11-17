@@ -405,7 +405,7 @@ export function RelationshipPanel({ link, opts, onClose, types, onEditTypes, onS
   if (!a || !b) return null;
   return (
     <div className="inspector wide" key={link.id}>
-      <div className="row gap-s"><strong className="grow">{a.name} &amp; {b.name}</strong><button className="icon-btn sm" onClick={onClose}><X size={13} /></button></div>
+      <div className="row gap-s"><strong className="grow">{a.name} &amp; {b.name}</strong><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={13} /></button></div>
       <label className="sfield"><span>Relationship type</span>
         <div className="row gap-s"><select className="input" value={String(link.data.type ?? 'other')} onChange={(e) => e.target.value === '__new' ? onEditTypes?.() : updateLinkData(link.id, { type: e.target.value })}>{types.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}{onEditTypes && <option value="__new">+ Make a custom type…</option>}</select></div></label>
       <div className="fgrid">
@@ -428,7 +428,7 @@ export function RelationshipPanel({ link, opts, onClose, types, onEditTypes, onS
             <div className="row gap-s">
               <select className="pill-select" value={h.type} onChange={(e) => setHistory(history.map((x, j) => (j === i ? { ...x, type: e.target.value } : x)))}>{types.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
               <input className="input sm grow" defaultValue={h.when} placeholder="When (e.g. Ch. 12)" onBlur={(e) => setHistory(history.map((x, j) => (j === i ? { ...x, when: e.target.value } : x)))} />
-              <button className="icon-btn sm" onClick={() => setHistory(history.filter((_, j) => j !== i))}><X size={12} /></button>
+              <button className="icon-btn sm" title="Remove" aria-label="Remove" onClick={() => setHistory(history.filter((_, j) => j !== i))}><X size={12} /></button>
             </div>
             <select className="input sm" value={h.eventId ?? ''} onChange={(e) => setHistory(history.map((x, j) => (j === i ? { ...x, eventId: e.target.value || undefined } : x)))}>
               <option value="">Linked timeline event (optional)</option>

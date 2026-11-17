@@ -188,7 +188,7 @@ function TreeCanvas({ tree, projectId }: { tree: Entity; projectId: string }) {
 
       {selPerson && (
         <div className="inspector">
-          <div className="row gap-s"><Avatar name={selPerson.name} color={selPerson.fields.color as string | undefined} image={selPerson.fields.image as string} size={32} /><strong className="grow ellipsis">{selPerson.name}</strong><button className="icon-btn sm" onClick={() => setSelNode(null)}><X size={13} /></button></div>
+          <div className="row gap-s"><Avatar name={selPerson.name} color={selPerson.fields.color as string | undefined} image={selPerson.fields.image as string} size={32} /><strong className="grow ellipsis">{selPerson.name}</strong><button className="icon-btn sm" title="Close" aria-label="Close" onClick={() => setSelNode(null)}><X size={13} /></button></div>
           <div className="col gap-s">
             {(['parent', 'child', 'spouse', 'sibling'] as const).map((k) => (
               <div key={k} className="row gap-s">
@@ -254,7 +254,7 @@ function FamilyLinkEditor({ link, opts, onClose }: { link: Link; opts: NonNullab
   const t = familyType(String(link.data.type));
   return (
     <div className="inspector">
-      <div className="row gap-s"><strong className="grow">{a?.name} {t.directional ? '→' : '—'} {b?.name}</strong><button className="icon-btn sm" onClick={onClose}><X size={13} /></button></div>
+      <div className="row gap-s"><strong className="grow">{a?.name} {t.directional ? '→' : '—'} {b?.name}</strong><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={13} /></button></div>
       <label className="sfield"><span>Relationship</span>
         <select className="input" value={t.id} onChange={(e) => updateLinkData(link.id, { type: e.target.value })}>{FAMILY_TYPES.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}</select></label>
       {t.id === 'custom' && <label className="sfield"><span>Label</span><input className="input" defaultValue={String(link.data.label ?? '')} onBlur={(e) => updateLinkData(link.id, { label: e.target.value })} /></label>}

@@ -77,7 +77,7 @@ export function FindReplace({ editor, mode, onClose, initialTerm }: { editor: Ed
         <button className={'chip' + (whole ? ' on' : '')} title="Whole word" onClick={() => setWhole(!whole)}>W</button>
         <button className={'chip' + (showRep ? ' on' : '')} onClick={() => setShowRep(!showRep)}>Replace</button>
         <span className="grow" />
-        <button className="icon-btn sm" onClick={onClose}><X size={14} /></button>
+        <button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={14} /></button>
       </div>
       {showRep && (
         <div className="row gap-s">

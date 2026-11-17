@@ -17,7 +17,7 @@ export function HistoryPanel({ sceneId, onRestore, onSnapshot, onClose, getCurre
   const [pickB, setPickB] = useState<Snapshot | null>(null);
   return (
     <div className="drawer">
-      <div className="drawer-head"><h4>Revision history</h4><button className="icon-btn sm" onClick={onClose}><X size={14} /></button></div>
+      <div className="drawer-head"><h4>Revision history</h4><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={14} /></button></div>
       <p className="muted small">A copy is saved automatically every 5 minutes while you write (last 50 kept), plus whenever you take a snapshot. Click a version to preview it; compare any two.</p>
       <button className="btn sm" onClick={onSnapshot}>Take snapshot now</button>
       <div className="snap-list">

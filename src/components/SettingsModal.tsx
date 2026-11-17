@@ -209,8 +209,8 @@ export function SettingsModal() {
               {orderedTools(s.sidebarTools).map((t, i, arr) => (
                 <div key={t.id} className="row gap-s tool-row">
                   <label className="check grow"><input type="checkbox" checked={t.visible} onChange={(e) => setSettings({ sidebarTools: arr.map((x) => ({ id: x.id, visible: x.id === t.id ? e.target.checked : x.visible })) })} /> {t.label}</label>
-                  <button className="icon-btn sm" disabled={i === 0} onClick={() => { const n = arr.map((x) => ({ id: x.id, visible: x.visible })); [n[i - 1], n[i]] = [n[i], n[i - 1]]; setSettings({ sidebarTools: n }); }}><ArrowUp size={13} /></button>
-                  <button className="icon-btn sm" disabled={i === arr.length - 1} onClick={() => { const n = arr.map((x) => ({ id: x.id, visible: x.visible })); [n[i + 1], n[i]] = [n[i], n[i + 1]]; setSettings({ sidebarTools: n }); }}><ArrowDown size={13} /></button>
+                  <button className="icon-btn sm" title="Move up" aria-label="Move up" disabled={i === 0} onClick={() => { const n = arr.map((x) => ({ id: x.id, visible: x.visible })); [n[i - 1], n[i]] = [n[i], n[i - 1]]; setSettings({ sidebarTools: n }); }}><ArrowUp size={13} /></button>
+                  <button className="icon-btn sm" title="Move down" aria-label="Move down" disabled={i === arr.length - 1} onClick={() => { const n = arr.map((x) => ({ id: x.id, visible: x.visible })); [n[i + 1], n[i]] = [n[i], n[i + 1]]; setSettings({ sidebarTools: n }); }}><ArrowDown size={13} /></button>
                 </div>
               ))}
             </div>

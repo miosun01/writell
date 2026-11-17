@@ -73,7 +73,7 @@ export function ReviewPanel({ editor, scene, onClose, onFind }: { editor: Editor
   const [tab, setTab] = useState<Tab>('comments');
   return (
     <div className="drawer review">
-      <div className="drawer-head"><h4>Editing tools</h4><button className="icon-btn sm" onClick={onClose}><X size={14} /></button></div>
+      <div className="drawer-head"><h4>Editing tools</h4><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={14} /></button></div>
       <div className="seg full">
         <button className={tab === 'comments' ? 'on' : ''} onClick={() => setTab('comments')}>Comments</button>
         <button className={tab === 'changes' ? 'on' : ''} onClick={() => setTab('changes')}>Changes</button>
@@ -242,7 +242,7 @@ function Checklist({ scene }: { scene: Scene }) {
         <div key={it.id} className="row gap-s check-item">
           <input type="checkbox" checked={it.done} onChange={(e) => save(items.map((x) => (x.id === it.id ? { ...x, done: e.target.checked } : x)))} />
           <span className={'grow' + (it.done ? ' done' : '')}>{it.text}</span>
-          <button className="icon-btn sm" onClick={() => save(items.filter((x) => x.id !== it.id))}><X size={12} /></button>
+          <button className="icon-btn sm" title="Remove" aria-label="Remove" onClick={() => save(items.filter((x) => x.id !== it.id))}><X size={12} /></button>
         </div>
       ))}
       <div className="row gap-s">

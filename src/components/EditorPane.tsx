@@ -566,7 +566,7 @@ function DetailsDrawer({ scene, onClose }: { scene: Scene; onClose: () => void }
   const chapter = useLiveQuery(() => db.chapters.get(scene.chapterId), [scene.chapterId]);
   return (
     <div className="drawer">
-      <div className="drawer-head"><h4>Scene details</h4><button className="icon-btn sm" onClick={onClose}><X size={14} /></button></div>
+      <div className="drawer-head"><h4>Scene details</h4><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={14} /></button></div>
       <label className="field"><span>Status</span>
         <div className="seg">
           {(Object.keys(STATUS_LABEL) as Status[]).map((st) => (

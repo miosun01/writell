@@ -587,7 +587,7 @@ function CalendarEditor({ timeline, onClose }: { timeline: Entity; onClose: () =
               <input className="input sm grow" value={m.name} onChange={(e) => setCal({ ...cal, months: cal.months.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })} />
               <input className="input sm" type="number" min={1} max={400} style={{ width: 70 }} value={m.days} onChange={(e) => setCal({ ...cal, months: cal.months.map((x, j) => (j === i ? { ...x, days: Math.max(1, +e.target.value || 1) } : x)) })} />
               <span className="muted small">days</span>
-              <button className="icon-btn sm" onClick={() => setCal({ ...cal, months: cal.months.filter((_, j) => j !== i) })} disabled={cal.months.length < 2}><X size={12} /></button>
+              <button className="icon-btn sm" title="Remove" aria-label="Remove" onClick={() => setCal({ ...cal, months: cal.months.filter((_, j) => j !== i) })} disabled={cal.months.length < 2}><X size={12} /></button>
             </div>
           ))}
         </div>
@@ -611,7 +611,7 @@ function EventPanel({ ev, data, opts, onClose }: { ev: Entity; data: NonNullable
   );
   return (
     <div className="inspector wide">
-      <div className="row gap-s"><span className="dot" style={{ background: categoryColor(String(ev.fields.category), ev.fields.color as string) }} /><strong className="grow">{ev.fields.era ? 'Era' : 'Event'}</strong><button className="icon-btn sm" onClick={onClose}><X size={13} /></button></div>
+      <div className="row gap-s"><span className="dot" style={{ background: categoryColor(String(ev.fields.category), ev.fields.color as string) }} /><strong className="grow">{ev.fields.era ? 'Era' : 'Event'}</strong><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={13} /></button></div>
       {(() => {
         const k = kindOf(ev); if (k === 'event') return null;
         const K = kindDef(k); const subj = ev.fields.subject as { id: string };

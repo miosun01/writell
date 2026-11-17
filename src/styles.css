@@ -1564,3 +1564,20 @@ canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: no
 .sb-bottom-row > * { flex: 1; }
 .sb-bottom-row .sync-badge { justify-content: center; padding: 0; height: 32px; position: relative; min-height: 0; }
 .sb-bottom-row .sync-badge .sync-dot { position: absolute; top: 6px; left: calc(50% + 5px); }
+
+/* ── polish: quieter headings, softer cards, one rounding scale ── */
+:root { --radius: 9px; --radius-lg: 13px; --line: color-mix(in srgb, var(--border) 78%, transparent); }
+h1 { font-weight: 650; letter-spacing: -.4px; }
+.section-title { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 600; margin: 28px 0 10px; }
+.sb-label > button:first-child { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.card { border-radius: var(--radius-lg); border-color: var(--line); }
+.card:hover { border-color: var(--border); }
+.modal { border-radius: 14px; }
+.btn { border-color: var(--line); }
+.btn:not(.primary):hover { border-color: var(--border); }
+.btn.primary { box-shadow: 0 1px 0 color-mix(in srgb, #fff 18%, transparent) inset, 0 1px 2px rgba(0,0,0,.18); }
+.stat { border-radius: 11px; border-color: var(--line); }
+.input { border-radius: var(--radius); }
+.statusbar { border-top-color: var(--line); }
+.page-head { align-items: center; }
+.tree-head, .palette-group, .psection h3, .sidebox-head h4, .picker-group, .note-section h4, .inspector h4, .analysis h4 { text-transform: none; letter-spacing: 0; font-size: 12px; }

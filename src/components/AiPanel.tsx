@@ -67,7 +67,7 @@ export function AiPanel({ editor, scene, onClose }: { editor: Editor; scene: Sce
 
   return (
     <div className="drawer ai">
-      <div className="drawer-head"><h4>AI assistant</h4><button className="icon-btn sm" onClick={onClose}><X size={14} /></button></div>
+      <div className="drawer-head"><h4>AI assistant</h4><button className="icon-btn sm" onClick={onClose} title="Close" aria-label="Close"><X size={14} /></button></div>
       {!hasKey ? (
         <div className="col gap-s"><p className="muted small">Add your Anthropic API key to use these optional tools.</p><button className="btn sm" onClick={() => setNav({ settingsOpen: true, settingsTab: 'ai' })}>Open AI settings</button></div>
       ) : <>

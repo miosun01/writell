@@ -69,7 +69,7 @@ function ProjectCard({ p, words }: { p: Project; words: number }) {
           <button className={'icon-btn sm fav-btn' + (p.favorite ? ' on' : '')} title={p.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-label={p.favorite ? 'Remove from favorites' : 'Add to favorites'} aria-pressed={!!p.favorite} onClick={(e) => { e.stopPropagation(); db.projects.update(p.id, { favorite: !p.favorite }); }}>
             <Star size={14} fill={p.favorite ? 'currentColor' : 'none'} />
           </button>
-          <button className="icon-btn sm" onClick={(e) => { e.stopPropagation(); projectMenu(e, p); }}><MoreHorizontal size={14} /></button>
+          <button className="icon-btn sm" title="More" aria-label="More" onClick={(e) => { e.stopPropagation(); projectMenu(e, p); }}><MoreHorizontal size={14} /></button>
         </div>
         {!!p.description?.trim() && <p className="card-desc" title={p.description}>{p.description}</p>}
         <div className="muted small">{fmtNum(words)} words · edited {timeAgo(p.updatedAt)}</div>

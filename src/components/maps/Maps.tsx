@@ -561,7 +561,7 @@ function MapEditor({ map }: { map: Entity }) {
           </div>
           {selPin && (
             <div className="pin-editor" key={selPin.id}>
-              <div className="row"><h4 className="grow">Selected pin</h4><button className="icon-btn sm" onClick={() => setSel(null)}><X size={12} /></button></div>
+              <div className="row"><h4 className="grow">Selected pin</h4><button className="icon-btn sm" title="Close" aria-label="Close" onClick={() => setSel(null)}><X size={12} /></button></div>
               <input className="input" defaultValue={selPin.label} placeholder="Name" onBlur={(e) => updatePin(selPin.id, { label: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
               <div className="row gap-s">{PIN_COLORS.map((c) => <button key={c} className={'swatch' + (selPin.color === c ? ' on' : '')} style={{ background: c }} aria-label={`Color ${c}`} onClick={() => updatePin(selPin.id, { color: c })} />)}</div>
               <div className="row gap-s">
