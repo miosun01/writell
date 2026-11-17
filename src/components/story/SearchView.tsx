@@ -90,7 +90,7 @@ export function SearchView({ projectId, q: initialQ }: { projectId: string; q?: 
 
   return (
     <div className="page search-page">
-      <h1>Search this project</h1>
+      <h1 className="bar-dup">Search this project</h1>
       <div className="bigsearch"><Search size={16} /><input autoFocus placeholder="Search" value={q} onChange={(e) => setQ(e.target.value)} /></div>
       {needle.length >= 2 && hits.length > 0 && (
         <div className="seg search-tabs" role="tablist">

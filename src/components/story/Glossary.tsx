@@ -47,7 +47,7 @@ export function GlossaryView({ projectId, entityId }: { projectId: string; entit
     <div className="page glossary-page">
       <header className="page-head">
         <div>
-          <h1>Glossary <InfoTip>Words made up for your world (places, titles, foods, spells, slang) and what they mean. They're underlined in your writing; point at one to see its meaning.</InfoTip></h1>
+          <h1 className="bar-dup">Glossary <InfoTip>Words made up for your world (places, titles, foods, spells, slang) and what they mean. They're underlined in your writing; point at one to see its meaning.</InfoTip></h1>
         </div>
       </header>
       <form className="task-add" onSubmit={(e) => { e.preventDefault(); void add(); }}>

@@ -878,6 +878,11 @@ textarea.reltext-body { resize: none; border: 0; outline: none; background: tran
   .page-head { gap: 10px; margin-bottom: 16px; }
   .page-head > div:first-child { min-width: 0; }
   .page-head h1 { font-size: 24px; }
+  /* the bar at the top already names the page */
+  .page-head h1.bar-dup { display: none; }
+  .page-head > div:has(> h1.bar-dup:only-child) { display: none; }
+  .main-panel .page-head h1.bar-dup, .main-panel .page-head > div:has(> h1.bar-dup:only-child) { display: revert; }
+  .ov-sum { display: none; }
   .page .two-col { grid-template-columns: minmax(0, 1fr); margin-top: 14px; }
   .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid { grid-template-columns: 1fr 1fr !important; gap: 10px; }

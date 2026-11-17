@@ -171,7 +171,7 @@ export function ProjectsView({ filter = 'all' }: { filter?: 'all' | 'favorites' 
   return (
     <div className="page">
       <header className="page-head">
-        <h1 className="grow">Projects</h1>
+        <h1 className="grow bar-dup">Projects</h1>
         <button className="btn primary" onClick={newProjectFlow}><Plus size={15} /> New project</button>
       </header>
       <div className="seg projects-tabs" role="tablist" aria-label="Show">

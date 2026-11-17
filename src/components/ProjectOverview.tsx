@@ -84,7 +84,7 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
                   {c.color && <span className="dot" style={{ background: c.color }} />}
                   <button className="ov-title" onClick={() => sc[0] && go({ view: 'write', projectId, sceneId: sc[0].id })}>
                     <span className="ellipsis">{c.title}</span>
-                    {c.summary && <span className="muted small ellipsis">{c.summary}</span>}
+                    {c.summary && <span className="muted small ellipsis ov-sum">{c.summary}</span>}
                   </button>
                   <span className="status-dot" title={STATUS_LABEL[c.status]} style={{ background: STATUS_COLOR[c.status] }} />
                   <span className="muted small num-w">{fmtNum(w)}</span>
@@ -94,7 +94,7 @@ export function ProjectOverview({ projectId }: { projectId: string }) {
                   <ul className="ov-scenes">
                     {sc.map((s) => (
                       <li key={s.id}><button onClick={() => go({ view: 'write', projectId, sceneId: s.id })}>
-                        <span className="status-dot" style={{ background: STATUS_COLOR[s.status] }} /><span className="grow ellipsis">{s.title}{s.summary ? <span className="muted"> — {s.summary}</span> : null}</span><span className="muted small">{fmtNum(s.words)}</span>
+                        <span className="status-dot" style={{ background: STATUS_COLOR[s.status] }} /><span className="grow ellipsis">{s.title}{s.summary ? <span className="muted ov-sum"> — {s.summary}</span> : null}</span><span className="muted small">{fmtNum(s.words)}</span>
                       </button></li>
                     ))}
                   </ul>

@@ -57,7 +57,7 @@ export function StatsView({ scope = '' }: { scope?: string }) {
   return (
     <div className="page">
       <header className="page-head">
-        <div><h1>Statistics <InfoTip>Only you see these. Turn them off any time in Settings → Editor.</InfoTip></h1></div>
+        <div><h1 className="bar-dup">Statistics <InfoTip>Only you see these. Turn them off any time in Settings → Editor.</InfoTip></h1></div>
         <select className="pill-select" value={scope} onChange={(e) => (getNav().panel?.view === 'statistics' ? setNav({ panel: { view: 'statistics', scope: e.target.value } }) : go({ view: 'statistics', scope: e.target.value }))}>
           <option value="">All projects</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
         </select>

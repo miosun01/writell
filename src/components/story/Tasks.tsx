@@ -32,7 +32,7 @@ export function TasksView({ projectId }: { projectId: string }) {
     <div className="page tasks-page">
       <header className="page-head">
         <div>
-          <h1>Tasks <InfoTip>Things to do for this book. Give one a date, or point it at a chapter or character.</InfoTip></h1>
+          <h1 className="bar-dup">Tasks <InfoTip>Things to do for this book. Give one a date, or point it at a chapter or character.</InfoTip></h1>
         </div>
       </header>
       <form className="task-add" onSubmit={(e) => { e.preventDefault(); add(); }}>

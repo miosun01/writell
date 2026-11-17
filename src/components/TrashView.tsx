@@ -47,7 +47,7 @@ export function TrashView() {
     <div className="page trash-page">
       <header className="page-head">
         <div>
-          <h1>Trash <InfoTip>Deleted things wait here until you remove them for good. Restoring puts back their links, family-tree spots and timeline entries too.</InfoTip></h1>
+          <h1 className="bar-dup">Trash <InfoTip>Deleted things wait here until you remove them for good. Restoring puts back their links, family-tree spots and timeline entries too.</InfoTip></h1>
         </div>
         {items.length > 0 && <button className="btn danger-text" onClick={async () => {
           if (await confirmDialog(`Empty the trash?`, `${items.length} item${items.length > 1 ? 's are' : ' is'} removed for good. This can’t be undone.`, { danger: true, ok: 'Empty trash' })) { await emptyTrash(); toast('Trash emptied'); }
