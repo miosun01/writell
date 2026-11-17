@@ -1321,6 +1321,7 @@ body.fx-shake .app { animation: fx-shake .75s cubic-bezier(.36, .07, .19, .97); 
 
 /* map page on phones: a full-size map, one scrolling row of tools, and the details in a sheet you open */
 .map-sheet-btn, .map-sheet-head { display: none !important; }
+.map-history { display: none; }
 @media (max-width: 700px), (max-height: 500px) and (pointer: coarse) {
   .map-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 6px 10px; }
   .map-tools::-webkit-scrollbar { display: none; }
@@ -1334,6 +1335,9 @@ body.fx-shake .app { animation: fx-shake .75s cubic-bezier(.36, .07, .19, .97); 
   .map-sheet-head { display: flex !important; position: sticky; top: -12px; margin: -12px -12px 0; padding: 10px 12px 6px; background: var(--panel); z-index: 1; }
   .map-hint { display: none; }
   .map-mini { transform: scale(.68); transform-origin: top right; right: 8px; top: 8px; }
+  .map-tools .tb-history { display: none; }
+  .map-history { display: flex; gap: 4px; position: absolute; left: 8px; top: 8px; z-index: 5; padding: 3px; border-radius: 10px;
+    background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--border); box-shadow: var(--shadow); }
 }
 
 /* statistics, friends, trash and admin open over the current page */
@@ -1509,3 +1513,4 @@ canvas { -webkit-touch-callout: none; -webkit-user-select: none; user-select: no
 @media (pointer: coarse) {
   .react-flow__handle { width: 16px !important; height: 16px !important; min-width: 16px; min-height: 16px; }
 }
+.tb-btn:disabled { opacity: .35; cursor: default; background: none; }

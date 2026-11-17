@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Move, Plus, Pencil, Trash2, Box, Square, Hand, ArrowUp, ArrowDown, Waves, Minus, Paintbrush, MapPin, Wand2, ImagePlus, Download, X, ExternalLink, Undo2, Home, MousePointer2, Eraser, SlidersHorizontal, Maximize, RotateCw, Copy,
+  Move, Plus, Pencil, Trash2, Box, Square, Hand, ArrowUp, ArrowDown, Waves, Minus, Paintbrush, MapPin, Wand2, ImagePlus, Download, X, ExternalLink, Undo2, Redo2, Home, MousePointer2, Eraser, SlidersHorizontal, Maximize, RotateCw, Copy,
 } from 'lucide-react';
 import { db, uid, type Entity } from '../../db';
 import { autoColor, createEntity, deleteEntity, updateEntity, pickImage } from '../../entities';
@@ -130,6 +130,9 @@ function MapEditor({ map }: { map: Entity }) {
   const [objs, setObjs] = useState<MapObject[]>(() => (f.objects as MapObject[] | undefined) ?? []);
   const objsRef = useRef(objs); objsRef.current = objs;
   const undo = useRef<Snap[]>([]);
+  const redo = useRef<Snap[]>([]);
+  const [, setHist] = useState(0); // re-draw the undo/redo buttons
+  const histChanged = () => setHist((v) => v + 1);
   const dirtyRect = useRef<Rect | null>(null);
   const [version, setVersion] = useState(0);
   const [tool, setTool] = useState<Tool>('view');
@@ -184,7 +187,8 @@ function MapEditor({ map }: { map: Entity }) {
   };
   useEffect(() => { const un = registerFlush(saveTerrain); return () => { saveTerrain(); un(); }; }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const later = () => { window.clearTimeout(saveTimer.current); saveTimer.current = window.setTimeout(saveTerrain, 500); };
-  const snap = () => { undo.current.push({ h: heights.current.slice(), p: paint.current.slice(), o: objsRef.current }); if (undo.current.length > 30) undo.current.shift(); };
+  const current = (): Snap => ({ h: heights.current.slice(), p: paint.current.slice(), o: objsRef.current });
+  const snap = () => { undo.current.push(current()); if (undo.current.length > 30) undo.current.shift(); redo.current = []; histChanged(); };
   const changeObjs = (next: MapObject[]) => { objsRef.current = next; setObjs(next); objsDirty.current = true; later(); };
   const full = () => { dirtyRect.current = null; };
 
@@ -200,7 +204,12 @@ function MapEditor({ map }: { map: Entity }) {
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
   });
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !(e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]')) { e.preventDefault(); doUndo(); } };
+    const k = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || (e.target as HTMLElement).closest('input, textarea, [contenteditable="true"]')) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); }
+      else if ((key === 'z' && e.shiftKey) || key === 'y') { e.preventDefault(); doRedo(); }
+    };
     window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
   });
 
@@ -268,11 +277,20 @@ function MapEditor({ map }: { map: Entity }) {
     dirty.current = true; setVersion((v) => v + 1);
   };
   const onStrokeEnd = () => { if (drawLine) { endDraw(); later(); return; } if (tool !== 'erase') later(); };
-  const doUndo = () => {
-    const u = undo.current.pop(); if (!u) return;
+  const restore = (u: Snap) => {
     heights.current = u.h; paint.current = u.p; dirty.current = true;
     objsRef.current = u.o; setObjs(u.o); objsDirty.current = true;
     full(); setVersion((v) => v + 1); later();
+  };
+  /** `forget`: take the step back without offering to redo it (a cancelled move) */
+  const doUndo = (forget = false) => {
+    const u = undo.current.pop(); if (!u) return;
+    if (!forget) { redo.current.push(current()); if (redo.current.length > 30) redo.current.shift(); }
+    restore(u); histChanged();
+  };
+  const doRedo = () => {
+    const r = redo.current.pop(); if (!r) return;
+    undo.current.push(current()); restore(r); histChanged();
   };
 
   const placePin = async (u: number, v: number) => {
@@ -329,7 +347,7 @@ function MapEditor({ map }: { map: Entity }) {
   const [carry, setCarry] = useState<string | null>(null);
   const carryStartLen = useRef(0);
   const endCarry = () => { setCarry(null); endMove(); };
-  const cancelCarry = () => { if (moveStart.current && undo.current.length > carryStartLen.current) doUndo(); moveStart.current = false; setCarry(null); };
+  const cancelCarry = () => { if (moveStart.current && undo.current.length > carryStartLen.current) doUndo(true); moveStart.current = false; setCarry(null); };
   const copyThing = (o: MapObject) => { snap(); const c = { ...o, id: uid(), u: Math.min(1, o.u + 0.004), v: Math.min(1, o.v + 0.004), ...(o.u2 !== undefined ? { u2: Math.min(1, o.u2 + 0.004), v2: Math.min(1, (o.v2 ?? o.v) + 0.004) } : {}), ...(o.pts ? { pts: o.pts.map((x) => Math.min(1, x + 0.004)) } : {}) }; changeObjs([...objsRef.current, c]); return c; };
   const thingMenu = (id: string, x: number, y: number) => {
     const o = objsRef.current.find((t) => t.id === id); if (!o) return;
@@ -381,7 +399,7 @@ function MapEditor({ map }: { map: Entity }) {
     edge /= 4 * N;
     const fill = sea > 0 ? (edge < sea ? edge : Math.max(0, sea - 0.12)) : 0.32;
     const { h, p, remap } = expandMap(heights.current, paint.current, N, N2, fill);
-    heights.current = h; paint.current = p; undo.current = [];
+    heights.current = h; paint.current = p; undo.current = []; redo.current = []; histChanged();
     const objects = objsRef.current.map((o) => ({ ...o, u: remap(o.u), v: remap(o.v), ...(o.u2 !== undefined ? { u2: remap(o.u2), v2: remap(o.v2 ?? o.v) } : {}) }));
     objsRef.current = objects; setObjs(objects);
     await set({ size: N2, ...heightFields(h), paint: encode(p), pins: pins.map((x) => ({ ...x, u: remap(x.u), v: remap(x.v) })), objects });
@@ -400,7 +418,8 @@ function MapEditor({ map }: { map: Entity }) {
         <button className={'tb-btn map-sheet-btn' + (sheet ? ' on' : '')} title="Map details" aria-pressed={sheet} onClick={() => setSheet((v) => !v)}><SlidersHorizontal size={15} /></button>
         <span className="tb-sep" />
         {TOOLS.map((t) => <button key={t.id} className={'tb-btn' + (tool === t.id ? ' on' : '')} title={`${t.label} (${t.key})`} aria-pressed={tool === t.id} onClick={() => { setTool(t.id); setPendingLine(null); }}><t.icon size={15} /></button>)}
-        <button className="tb-btn" title="Undo (Ctrl+Z)" onClick={doUndo}><Undo2 size={15} /></button>
+        <button className="tb-btn tb-history" title="Undo (Ctrl+Z)" aria-label="Undo" disabled={!undo.current.length} onClick={() => doUndo()}><Undo2 size={15} /></button>
+        <button className="tb-btn tb-history" title="Redo (Ctrl+Shift+Z)" aria-label="Redo" disabled={!redo.current.length} onClick={doRedo}><Redo2 size={15} /></button>
         <span className="tb-sep" />
         {tool !== 'view' && tool !== 'pin' && tool !== 'object' && tool !== 'select' && <>
           <label className="mini-range" title="Brush size (across)"><span>Size <span className="muted">{meters(effBrush(tool))}</span></span>
@@ -426,6 +445,11 @@ function MapEditor({ map }: { map: Entity }) {
           {view === '3d'
             ? <Terrain3D {...shared} heightScale={heightScale} lowPoly={!!f.lowPoly} dirtyRef={dirtyRect} />
             : <Map2D {...shared} heightScale={heightScale} onMovePin={(id, u, v) => updatePin(id, { u, v })} />}
+          {/* on phones the toolbar scrolls, so undo and redo also sit on the map itself */}
+          <div className="map-history">
+            <button className="tb-btn" aria-label="Undo" title="Undo" disabled={!undo.current.length} onClick={() => doUndo()}><Undo2 size={17} /></button>
+            <button className="tb-btn" aria-label="Redo" title="Redo" disabled={!redo.current.length} onClick={doRedo}><Redo2 size={17} /></button>
+          </div>
           <div className="map-hint muted small">
             {carry ? 'Move the mouse to carry it · click to put it down · Esc to cancel'
               : tool === 'journey' ? (editJ ? `Click the map to add a stop to ${editJ.name}'s journey · Esc when done` : 'Pick a journey on the right')
